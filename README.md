@@ -113,12 +113,10 @@ plugin constructors, not a rewrite.
 
 **Turn-taking tuned for learners, not call-center callers.** The `balanced` preset ends a turn
 after only 128 ms of silence following a period. In testing, *"Wait, I'm sorry. I'm confused. Can
-you teach me…"* became three turns, and the tutor started answering "Wait, I'm sorry." The logs
-confirmed it (`stt end of speech received while vad is still in a speech segment`). Learners
-pause constantly — to find a word, to work up to a phrase — so `min_turn_silence` is raised to
+you teach me…"* became three turns, and the tutor started answering "Wait, I'm sorry." Learners
+pause constantly so `min_turn_silence` is raised to
 600 ms and `max_turn_silence` to 2000 ms. Trade-off: replies start ~0.5 s later after a
-sentence-final pause. Worth it for this audience; a configuration a customer would tune per
-product.
+sentence-final pause. Worth it for this audience.
 
 **Language tags and a native voice per language.** AssemblyAI TTS doesn't detect language: a
 session speaks the language it was opened with. A tutor reply mixes languages in every sentence,
@@ -129,12 +127,6 @@ pronunciation tutor can't do. The LLM wraps foreign phrases in `<es>…</es>` (a
   It sounded clearly worse; AssemblyAI's docs warn that voices sound best in their own language.
 - *Voices:* all female, native to their language, chosen by ear: Kyla (en), Constanza (es),
   Agathe (fr), Magdalena (de), Giada (it), Iara (pt).
-
-**Teach pronunciation with audio, not respellings.** The first prompt had the tutor say
-"beeb-lee-oh-TEH-kah", which an English voice reads out as nonsense. Now the native voice says
-the word slowly by syllable, then whole (`<es>bi... blio... te... ca... biblioteca</es>`;
-ellipses produce pauses per AssemblyAI's TTS prompting guide), and the written respelling goes in
-a `<hint>` tag that the transcript shows but the TTS never receives.
 
 **LLM chosen by measurement.** Time-to-first-token is the latency a voice user feels most, so
 candidates were timed on a real tutor question through LLM Gateway (3 runs each, median):
@@ -148,6 +140,11 @@ For a pronunciation tutor, a fast wrong answer is worse than a slightly slower r
 these two models were available on the free plan used for this build; Claude, GPT and Gemini
 models on the Gateway are worth benchmarking the same way on a paid account. The model is set by
 `LLM_MODEL` in the environment.)
+
+**TTS speaks 6 languages; STT understands 32.** Verified against the live API: `japanese`,
+  `mandarin` and `korean` return `422 not in supported set`. A learner of Japanese can be
+  understood but not spoken to. The architecture already isolates TTS per language, so routing
+  other languages to a third-party TTS is a contained change. Covered in the evaluation plan.
 
 
 ### Cost and latency panel
@@ -256,27 +253,4 @@ It shows the features the tutor doesn't use:
                                                                                   │ Turn, LLMGatewayResponse
  speakers ◄─ page ◄─ TTS HTTP API (Kyla, temporary token) ◄─ English ◄────────────┘
 ```
-
-**Decisions and findings:**
-
-- **Temporary tokens stop translating after 10 turns.** The page first connected to AssemblyAI
-  directly with a temporary token (the documented way for browsers). After a few sentences,
-  translations stopped arriving. Tested with a 16-sentence clip: a token session returned exactly
-  10 `LLMGatewayResponse` messages and then none, even with the next sentences 30+ s later (so not
-  a per-minute limit), and even with a token minted with a higher LLM Gateway `rpm`. The same
-  session authenticated with the API key translated all 16. This isn't in the docs, so it's worth
-  reporting. The fix: `server.py` relays the STT WebSocket and adds the API key and the
-  translation prompt server-side. The key still never reaches the page, and translation stays
-  inside the STT stream. The relay passed the same 16-sentence test with 16 translations.
-- **A translation that never arrives doesn't hang the page.** The docs say a failed or timed-out
-  translation sends nothing. If no translation arrives within 4 s, the page asks
-  `/interpreter/translate`, which runs the same prompt against LLM Gateway directly; the card is
-  marked "via fallback".
-- **Per-language colors come from the LLM, not the STT model.** Language detection labels a whole
-  turn, not each word, so the translation prompt also returns the sentence split into language
-  segments. The page says which is which.
-- **TTS speaks 6 languages; STT understands 32.** Verified against the live API: `japanese`,
-  `mandarin` and `korean` return `422 not in supported set`. A learner of Japanese can be
-  understood but not spoken to. The architecture already isolates TTS per language, so routing
-  other languages to a third-party TTS is a contained change. Covered in the evaluation plan.
 
