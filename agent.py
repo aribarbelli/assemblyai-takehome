@@ -18,6 +18,7 @@ from livekit.agents import (
     TurnHandlingOptions,
     cli,
 )
+from livekit.agents import metrics
 from livekit.plugins import assemblyai, openai, silero
 
 from language_tts import NATIVE_VOICES, LanguageRouter
@@ -121,6 +122,12 @@ async def entrypoint(ctx: JobContext) -> None:
             audio_out.resume()
         session.input.set_audio_enabled(not paused)
         return "ok"
+
+    # Per-turn latency (end-of-turn delay, LLM time-to-first-token, TTS time-to-first-byte) in the
+    # logs; these are the numbers a customer's evaluation will compare against their current stack.
+    @session.on("metrics_collected")
+    def _on_metrics(ev) -> None:
+        metrics.log_metrics(ev.metrics)
 
     await session.start(agent=Tutor(router), room=ctx.room)
     # Registering requires a connected room, which session.start() takes care of.
