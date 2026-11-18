@@ -118,13 +118,14 @@
   }
   .stage.aai { border-color: rgba(142, 164, 255, 0.45); background: rgba(61, 99, 255, 0.08); }
   .stage.mine { border-color: rgba(199, 195, 178, 0.45); }
+  .stage .badge { align-self: flex-start; }
   .stage .step { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; }
-  .stage h3 { margin: 0; font-size: 15px; line-height: 1.3; }
+  .stage h3 { margin: 0; font-size: 16px; line-height: 1.3; }
   .stage p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
   .stage code { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--sand); word-break: break-word; }
   .arrow { flex: 0 0 26px; display: flex; align-items: center; justify-content: center; color: #8ea4ff; font-size: 20px; }
   .orchestrator {
-    width: 100%; border: 1px dashed rgba(107, 227, 164, 0.5); border-radius: 14px; padding: 12px 16px;
+    width: 100%; margin-bottom: 4px; border: 1px dashed rgba(107, 227, 164, 0.5); border-radius: 14px; padding: 12px 16px;
     font-size: 13px; color: var(--muted); line-height: 1.5;
   }
   .orchestrator b { color: var(--text); }
@@ -357,47 +358,45 @@
     </div>
   </div>
 
-  <div class="pipeline">
-    <div class="stage">
-      <div class="step">1</div><span class="badge client">Browser</span>
-      <h3>Learner speaks</h3>
-      <p>“How do I say ‘where is the library’ in Spanish?” Mic audio streams over WebRTC.</p>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage aai">
-      <div class="step">2</div><span class="badge aai">AssemblyAI</span>
-      <h3>Streaming speech-to-text</h3>
-      <p><code>stt-3-7-realtime-agent</code>. Handles English with foreign words mixed in, and decides when
-         the learner has finished their thought (tuned to wait longer for learners).</p>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage aai">
-      <div class="step">3</div><span class="badge aai">AssemblyAI</span>
-      <h3>LLM Gateway</h3>
-      <p><code>gemma-4-31b</code>, OpenAI-compatible. Writes the tutor's reply and wraps each foreign
-         phrase in a language tag.</p>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage mine">
-      <div class="step">4</div><span class="badge mine">Built for this demo</span>
-      <h3>Language router</h3>
-      <p><code>language_tts.py</code>. Splits the reply at the tags as it streams in and sends each piece to
-         the voice for its language.</p>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage aai">
-      <div class="step">5</div><span class="badge aai">AssemblyAI</span>
-      <h3>Streaming text-to-speech</h3>
-      <p><code>assemblyai-tts-1</code>, one native voice per language. Audio streams back to the learner.</p>
-    </div>
-  </div>
-
   <div class="orchestrator">
     <span class="badge oss">Open source</span>&nbsp; <b>LiveKit Agents</b> runs the conversation around these
     steps: real-time audio in and out, barge-in when the learner talks over the tutor, pause and resume,
     conversation history, and per-turn latency metrics. It's a framework many voice teams already use, which is
     why switching to AssemblyAI is a plugin swap.
   </div>
+
+  <div class="pipeline">
+    <div class="stage">
+      <div class="step">1</div><span class="badge client">Browser</span>
+      <h3>Learner speaks</h3>
+      <code>mic · WebRTC</code>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage aai">
+      <div class="step">2</div><span class="badge aai">AssemblyAI</span>
+      <h3>Streaming speech-to-text</h3>
+      <code>assemblyai-stt-3-7-realtime-agent</code>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage aai">
+      <div class="step">3</div><span class="badge aai">AssemblyAI</span>
+      <h3>LLM Gateway</h3>
+      <code>gemma-4-31b</code>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage mine">
+      <div class="step">4</div><span class="badge mine">Built for this demo</span>
+      <h3>Language router</h3>
+      <code>language_tts.py</code>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage aai">
+      <div class="step">5</div><span class="badge aai">AssemblyAI</span>
+      <h3>Streaming text-to-speech</h3>
+      <code>assemblyai-tts-1 · 6 native voices</code>
+    </div>
+  </div>
+
 
   <section class="arch-section">
     <h2>How a reply finds its voice</h2>
@@ -416,15 +415,6 @@
     </div>
   </section>
 
-  <section class="arch-section">
-    <h2>Details that matter</h2>
-    <div class="facts">
-      <div class="fact"><b>One API key, one bill</b>Speech-to-text, LLM and text-to-speech all run on AssemblyAI.</div>
-      <div class="fact"><b>Streaming end to end</b>English starts speaking on the first tokens; a language switch only waits for the closing tag.</div>
-      <div class="fact"><b>Six native voices</b>Kyla (en), Constanza (es), Agathe (fr), Magdalena (de), Giada (it), Iara (pt).</div>
-      <div class="fact"><b>Sessions kept warm</b>The router sends KeepAlive so idle voices don't disconnect (the plugin doesn't).</div>
-    </div>
-  </section>
 </main>
 <main id="view-evals" class="view" hidden>
   <div class="evals-head">
