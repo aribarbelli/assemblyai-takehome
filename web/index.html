@@ -128,6 +128,23 @@
   }
   .play.playing { background: #c2334d; }
   .evals-note { color: var(--muted); font-size: 12px; line-height: 1.5; width: 100%; }
+  .migration { width: 100%; display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+  .migration h2 { margin: 0; font-size: 22px; }
+  .migration > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 760px; }
+  .swaps { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .swap { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .swap .num { color: #8ea4ff; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .swap h3 { margin: 0; font-size: 16px; }
+  .swap p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .swap pre {
+    margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); overflow-x: auto;
+    font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text);
+  }
+  .swap pre .hl { color: var(--sand); }
+  .caveat { border: 1px solid var(--border); border-radius: 14px; padding: 14px 18px; font-size: 14px; line-height: 1.55; }
+  .caveat b { color: var(--text); }
+  .caveat ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+  .caveat code { font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--sand); }
   @media (max-width: 480px) {
     header { padding: 14px 16px; }
     .tabs button { padding: 6px 10px; font-size: 12px; }
@@ -287,6 +304,53 @@
   </div>
   <div class="table-wrap"><table class="evals" id="evals-table"></table></div>
   <div class="evals-note" id="evals-note"></div>
+
+  <section class="migration">
+    <h2>Ease of migration</h2>
+    <p>For a customer already on LiveKit Agents (Pipecat has equivalent AssemblyAI support), switching
+       to AssemblyAI changes three things. Their prompts, tools, UI and telephony stay as they are.</p>
+    <div class="swaps">
+      <div class="swap">
+        <div class="num">1 · Speech-to-text</div>
+        <h3>Swap the STT plugin</h3>
+        <pre>stt=<span class="hl">assemblyai.STT</span>(
+    model="assemblyai-stt-3-7-realtime-agent",
+    language_codes=["en", "es", "fr", ...],
+)</pre>
+        <p>End-of-turn detection comes with it: AssemblyAI's model decides when the learner is done.</p>
+      </div>
+      <div class="swap">
+        <div class="num">2 · LLM</div>
+        <h3>Change the address the LLM calls</h3>
+        <pre>llm=openai.LLM(
+    model="gemma-4-31b",
+    base_url="<span class="hl">https://llm-gateway.assemblyai.com/v1</span>",
+)</pre>
+        <p>LLM Gateway speaks the OpenAI format: same client, new address, the same API key as STT and TTS.</p>
+      </div>
+      <div class="swap">
+        <div class="num">3 · Text-to-speech</div>
+        <h3>Swap the TTS plugin</h3>
+        <pre>tts=<span class="hl">assemblyai.TTS</span>(
+    model="assemblyai-tts-1",
+    voice="aai-kyla",
+)</pre>
+        <p>One voice per language, from AssemblyAI's catalog.</p>
+      </div>
+    </div>
+    <div class="caveat">
+      <b>The one part that isn't a config swap:</b> AssemblyAI's text-to-speech speaks one language per
+      session, and a tutor's reply mixes languages in every sentence. The native voice per language
+      needs the routing module in this repo (<code>language_tts.py</code>, about 200 lines, built for this
+      demo in an afternoon). It's reusable as is, so it ships with the migration rather than being rebuilt.
+      <ul>
+        <li>It also sends the KeepAlive the LiveKit plugin is missing, so idle voices don't disconnect
+            (worth reporting upstream).</li>
+        <li>Rollout without risk: shadow mode first (AssemblyAI transcribes alongside the current provider,
+            no user impact), then 5% of sessions, then ramp. Rolling back at any step is a config change.</li>
+      </ul>
+    </div>
+  </section>
 </main>
 <main id="view-extra" class="view" hidden>
   <div class="interp-head">
