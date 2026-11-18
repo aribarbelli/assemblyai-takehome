@@ -8,9 +8,10 @@ Built as the reference implementation for a rip-and-replace evaluation: a custom
 language-learning voice agent on another provider is deciding whether to move to AssemblyAI.
 **The evaluation plan is in [`docs/evaluation-plan.md`](docs/evaluation-plan.md).**
 
-The page has two tabs: **Language Tutor** (the reference agent) and **Extra Credit**, a game called
-*Stump the Interpreter* that shows off mixed-language speech recognition
-([below](#extra-credit-stump-the-interpreter)).
+The page has three tabs: **Language Tutor** (the reference agent), **Evaluations** (how its
+speech-to-text handles learners, from recorded clips; [below](#evaluation-recorded-clips-streamed-in-real-time)),
+and **Extra Credit**, a game called *Stump the Interpreter* that shows off mixed-language speech
+recognition ([below](#extra-credit-stump-the-interpreter)).
 
 Every model in the loop runs on one AssemblyAI API key:
 
@@ -82,8 +83,9 @@ allow the microphone, and ask something like *"How do I say 'where is the train 
 | `language_tts.py` | Splits the LLM's tagged reply by language and speaks each segment with that language's native voice; keeps idle TTS sessions alive; counts TTS characters for the cost estimate |
 | `prompts.py` | The tutor's system prompt and greeting |
 | `usage.py` | Per-conversation latency and estimated cost, with the list prices it uses |
-| `server.py` | Serves the web page, mints LiveKit room tokens, and backs the interpreter: STT relay, translation fallback, TTS tokens |
-| `web/index.html` | Single-file UI (no build step): intro screen, both tabs, LiveKit browser SDK from a CDN |
+| `server.py` | Serves the web page, mints LiveKit room tokens, serves evaluation results, and backs the interpreter: STT relay, translation fallback, TTS tokens |
+| `web/index.html` | Single-file UI (no build step): intro screen, all three tabs, LiveKit browser SDK from a CDN |
+| `evals/` | Real-time STT evaluation: clip list, guided recorder, runner, and the latest results |
 | `run.sh` | Starts all three processes; Ctrl+C stops them |
 
 ### One turn
