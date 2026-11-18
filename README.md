@@ -107,19 +107,9 @@ allow the microphone, and ask something like *"How do I say 'where is the train 
 
 ## Key decisions
 
-Each of these was a choice between options; the reasoning is the part worth reading.
-
-**LiveKit Agents over the raw SDK or a fully managed agent.** The hard parts of a voice agent are
-not the model calls but the plumbing between them: streaming, end-of-turn, barge-in, conversation
-history. A framework handles those, and, more importantly for this deal, a customer evaluating a
-switch most likely already runs on one. With LiveKit, moving to AssemblyAI is a change to two
-plugin constructors, not a rewrite. The one piece specific to language learning (per-language
-TTS) slots into LiveKit's `tts_node` override without fighting the framework.
-
-**The newest STT model, set explicitly.** AssemblyAI's docs recommend
-`assemblyai-stt-3-7-realtime-agent` for voice agents; the LiveKit plugin still defaults to the
-previous model, so it is set explicitly. `language_codes` steers native code-switching to exactly
-the six languages the whole pipeline supports.
+**LiveKit Agents over the raw SDK or a fully managed agent.** The hard parts of a voice agent is plumbing together the different model calls: streaming, end-of-turn, barge-in, conversation
+history. The LiveKit handles this, so moving to AssemblyAI is a change to two
+plugin constructors, not a rewrite.
 
 **Turn-taking tuned for learners, not call-center callers.** The `balanced` preset ends a turn
 after only 128 ms of silence following a period. In testing, *"Wait, I'm sorry. I'm confused. Can
@@ -159,9 +149,6 @@ these two models were available on the free plan used for this build; Claude, GP
 models on the Gateway are worth benchmarking the same way on a paid account. The model is set by
 `LLM_MODEL` in the environment.)
 
-**Pause means pause.** The button freezes playback mid-sentence (LiveKit's audio output supports
-true pause/resume) instead of discarding the rest of the reply. A learner who steps away and
-comes back hears the end of the phrase; a learner who wants to move on just talks.
 
 ### Cost and latency panel
 
@@ -234,14 +221,6 @@ describing a learner who mispronounces words. Full transcripts are in
 - **Mandarin in the middle of a sentence is the weak spot.** Mandarin on its own is perfect once
   the model listens for it. Switched into mid-sentence after English and Portuguese, it came out
   as romanized sounds in every configuration.
-- **The tutor's longer turn timing earned its keep on the mixed sentence.** With the preset's
-  128 ms timing the turn ended mid-sentence and the Mandarin was lost; with the tutor's 600 ms it
-  stayed whole. (The hesitant clip passed either way: my pauses weren't long enough to trigger it.)
-- **Limits of this run:** one speaker, nine clips, one run each. Enough to find failure modes and
-  compare configurations, not to measure rates. That's what the full test set in the plan is for.
-- **In the demo:** the **Evaluations** tab shows the tutor's own use cases under the tutor's
-  settings (Mandarin and the four-language sentence belong to the interpreter), with each
-  recording playable.
 - **Next step: let the customer test it themselves.** A "test it yourself" panel in that tab:
   type the phrase, record it or upload the customer's own learner recordings, and get the same
   real-time transcription and pass/fail as `evals/run.py`. In a real evaluation, the customer's
@@ -296,48 +275,8 @@ It shows the features the tutor doesn't use:
 - **Per-language colors come from the LLM, not the STT model.** Language detection labels a whole
   turn, not each word, so the translation prompt also returns the sentence split into language
   segments. The page says which is which.
-- **Mid-sentence Mandarin is the hardest case seen.** Mandarin alone transcribed perfectly
-  (confidence 1.0). In a test clip of synthetic macOS voices switching English → Spanish →
-  Portuguese → Mandarin, the Portuguese and Mandarin parts came out as Spanish-sounding text.
-  With a real speaker, single-language Mandarin, Spanish and Portuguese sentences all transcribed
-  correctly, but Mandarin switched into mid-sentence still came out romanized ("dan si, tai
-  guela"; see [Evaluation](#evaluation-recorded-clips-streamed-in-real-time)).
-- **Echo.** While the translation plays, the page sends silence instead of mic audio so the
-  model doesn't transcribe Kyla.
-
----
-
-## Limitations and what I found along the way
-
 - **TTS speaks 6 languages; STT understands 32.** Verified against the live API: `japanese`,
   `mandarin` and `korean` return `422 not in supported set`. A learner of Japanese can be
   understood but not spoken to. The architecture already isolates TTS per language, so routing
   other languages to a third-party TTS is a contained change. Covered in the evaluation plan.
-- **Free plan: 5 new TTS sessions per minute.** The first version opened all six language
-  sessions at startup and hit the limit (`asked to wait 19.0s before opening a session`); now
-  only English opens up front and the rest connect on first use. Paid plans start at 200/minute
-  and scale with use, so this is a dev-only constraint, but the design lesson (one session per
-  language per conversation, reused) holds at any scale.
-- **Idle TTS sessions close after 120 s, and the LiveKit plugin sends no KeepAlive.** Its code
-  assumes idle sessions never time out. That caused reconnect delays and lost speech after long
-  pauses. `language_tts.py` sends a `KeepAlive` every 60 s on every open session; verified with a
-  3m43s pause and zero closures. This reaches into the plugin's connection pool, so the plugin
-  version is pinned; worth reporting upstream.
-- **Word-level transcript alignment is off.** Speaking one reply over several TTS sessions means
-  LiveKit falls back to its own text/audio sync, so after a barge-in the saved history may contain
-  a few words the learner didn't actually hear.
-- **The tutor can't tell a near-miss pronunciation from a correct one.** Speech-to-text writes down
-  the nearest real word, so *bibliotica* comes back as "biblioteca" and the tutor praises it. See
-  [Evaluation](#evaluation-recorded-clips-streamed-in-real-time). (The opposite error, *advogado*
-  heard as "advocado" five times during live testing, didn't reproduce on recorded clips.)
-- **No LLM fallback yet.** One request in testing got no response for 10 s before LiveKit retried.
-  Next step: a shorter timeout plus an LLM Gateway fallback model.
-- **An open session is billed even when idle.** Streaming STT is billed for the time the session is
-  open. A browser tab left open (or paused) keeps its session running; one left over during
-  development ran for 15+ minutes with no audio. A deployment should close sessions after a period
-  of inactivity.
-- **Chrome only for the interpreter.** It records the mic through a 16 kHz `AudioContext`, which
-  Firefox doesn't allow.
-- **Local only.** `livekit-server --dev` uses fixed dev credentials and binds to localhost. A
-  deployment would use LiveKit Cloud or a self-hosted server with real keys, and mint browser
-  tokens server-side as `server.py` does.
+
