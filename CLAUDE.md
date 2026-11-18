@@ -12,4 +12,6 @@ memorized parameter names. Use the `assemblyai-docs` MCP server for mid-task doc
 
 - Python 3.13, virtualenv at `.venv/` (`source .venv/bin/activate`), deps pinned in `requirements.txt`.
 - API key in `.env` as `ASSEMBLYAI_API_KEY` (gitignored; never commit or print it).
-- Streaming STT in the installed SDK (assemblyai 1.10.11) is `assemblyai.streaming.v3.StreamingClient`.
+- Orchestration: LiveKit Agents 1.8.12 with `livekit-plugins-assemblyai` (`assemblyai.STT`, `assemblyai.TTS`); LLM via LLM Gateway through `livekit.plugins.openai` (base URL `https://llm-gateway.assemblyai.com/v1`). One AssemblyAI key covers all three.
+- STT model: `assemblyai-stt-3-7-realtime-agent` (current recommendation for voice agents; the plugin defaults to `universal-3-6-pro`, so set it explicitly).
+- TTS speaks only en/es/de/fr/it/pt and does not detect language — `language` must be set per session.

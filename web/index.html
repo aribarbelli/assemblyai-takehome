@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language Tutor</title>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.15.5/dist/livekit-client.umd.min.js"></script>
+<style>
+  :root {
+    --bg-top: #000000;
+    --bg-bottom: #0a1433;
+    --panel: rgba(255, 255, 255, 0.04);
+    --border: rgba(255, 255, 255, 0.09);
+    --text: #f2f3f7;
+    --muted: #8a93ad;
+    --blue: #3d63ff;
+    --blue-glow: rgba(61, 99, 255, 0.45);
+    --sand: #c7c3b2; /* from the AssemblyAI mark */
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse 120% 80% at 50% 100%, #12235c 0%, var(--bg-bottom) 40%, var(--bg-top) 100%) fixed;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px; border-bottom: 1px solid var(--border);
+  }
+  header img { height: 22px; display: block; }
+  header .product { color: var(--muted); font-size: 14px; letter-spacing: 0.02em; }
+  main {
+    flex: 1; width: 100%; max-width: 720px; margin: 0 auto;
+    padding: 32px 20px 28px; display: flex; flex-direction: column; align-items: center; gap: 24px;
+    min-height: 0;
+  }
+
+  /* Orb: reflects the agent's state (lk.agent.state) */
+  .orb-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .orb {
+    width: 120px; height: 120px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #7d96ff, var(--blue) 45%, #14246b 100%);
+    box-shadow: 0 0 40px var(--blue-glow);
+    opacity: 0.35; transform: scale(0.92);
+    transition: opacity 0.4s, transform 0.4s, box-shadow 0.4s;
+  }
+  .orb.listening { opacity: 1; transform: scale(1); animation: breathe 3s ease-in-out infinite; }
+  .orb.thinking  { opacity: 1; animation: think 1s ease-in-out infinite; }
+  .orb.speaking  { opacity: 1; animation: speak 0.5s ease-in-out infinite alternate; box-shadow: 0 0 70px var(--blue-glow); }
+  @keyframes breathe { 50% { transform: scale(1.04); } }
+  @keyframes think   { 50% { transform: scale(0.94); opacity: 0.7; } }
+  @keyframes speak   { from { transform: scale(1); } to { transform: scale(1.1); } }
+  .status { color: var(--muted); font-size: 14px; height: 18px; }
+
+  .transcript {
+    width: 100%; flex: 1; min-height: 200px; overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .transcript .empty { color: var(--muted); font-size: 14px; margin: auto; text-align: center; }
+  .line { line-height: 1.5; font-size: 15px; }
+  .line .who { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+  .line.user .who  { color: var(--sand); }
+  .line.agent .who { color: #8ea4ff; }
+  .line.interim .text { color: var(--muted); }
+  .foreign { color: var(--sand); font-weight: 600; } /* phrases spoken by the native-language voice */
+  .hint { color: var(--muted); font-size: 13px; font-style: italic; } /* written respelling, not spoken */
+  .hint::before { content: "("; } .hint::after { content: ")"; }
+
+  button#toggle {
+    font: inherit; font-size: 16px; font-weight: 600; color: white; cursor: pointer;
+    padding: 14px 40px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15);
+    background: var(--blue); box-shadow: 0 6px 24px var(--blue-glow);
+    min-width: 180px; transition: background 0.2s, transform 0.1s;
+  }
+  button#toggle:hover { background: #5577ff; }
+  button#toggle:active { transform: scale(0.97); }
+  button#toggle:disabled { opacity: 0.6; cursor: default; }
+  button#toggle.paused { background: transparent; box-shadow: none; }
+  .error { color: #ff8a8a; font-size: 13px; min-height: 16px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo.svg" alt="AssemblyAI">
+  <span class="product">Language Tutor</span>
+</header>
+<main>
+  <div class="orb-wrap">
+    <div id="orb" class="orb"></div>
+    <div id="status" class="status">Press Start to begin</div>
+  </div>
+  <div id="transcript" class="transcript">
+    <div class="empty">Ask how to say anything in Spanish, French, German, Italian, or Portuguese — e.g. “How do I say ‘where is the library’ in French?”</div>
+  </div>
+  <button id="toggle">▶&nbsp; Start</button>
+  <div id="error" class="error"></div>
+</main>
+
+<script>
+const { Room, RoomEvent, Track, ParticipantKind } = LivekitClient;
+
+const orb = document.getElementById("orb");
+const statusEl = document.getElementById("status");
+const transcriptEl = document.getElementById("transcript");
+const button = document.getElementById("toggle");
+const errorEl = document.getElementById("error");
+
+const STATE_LABELS = { initializing: "Connecting…", listening: "Listening…", thinking: "Thinking…", speaking: "Speaking…" };
+
+let room = null;
+let mode = "idle"; // idle | live | paused
+const lines = new Map(); // segment id -> line element
+
+function setButton(label, cls = "") { button.innerHTML = label; button.className = cls; }
+
+function setAgentState(state) {
+  if (mode === "paused") return;
+  orb.className = "orb " + (state || "");
+  statusEl.textContent = STATE_LABELS[state] || "";
+}
+
+function agentParticipant() {
+  return [...room.remoteParticipants.values()].find((p) => p.kind === ParticipantKind.AGENT);
+}
+
+function upsertLine(segmentId, isAgent, text, final) {
+  transcriptEl.querySelector(".empty")?.remove();
+  let line = lines.get(segmentId);
+  if (!line) {
+    line = document.createElement("div");
+    line.className = "line " + (isAgent ? "agent" : "user");
+    line.innerHTML = `<span class="who">${isAgent ? "Tutor" : "You"}</span><span class="text"></span>`;
+    transcriptEl.appendChild(line);
+    lines.set(segmentId, line);
+  }
+  line.querySelector(".text").innerHTML = renderTagged(text);
+  line.classList.toggle("interim", !isAgent && !final);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+// The agent's text carries <es>...</es> tags (they route speech to the Spanish voice).
+// Show those phrases highlighted, hide the tags, and hide a tag that's only half-streamed.
+function renderTagged(text) {
+  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return esc
+    .replace(/&lt;\/?[a-z]{0,4}$/, "") // a tag still arriving token by token
+    .replace(/&lt;hint&gt;([\s\S]*?)(&lt;\/hint&gt;|$)/g, '<span class="hint">$1</span>')
+    .replace(/&lt;([a-z]{2})&gt;([\s\S]*?)(&lt;\/\1&gt;|$)/g, '<span class="foreign" lang="$1">$2</span>')
+    .replace(/&lt;\/([a-z]{2}|hint)&gt;/g, "");
+}
+
+async function start() {
+  button.disabled = true;
+  errorEl.textContent = "";
+  statusEl.textContent = "Connecting…";
+  try {
+    const { url, token } = await (await fetch("/token")).json();
+    room = new Room({ adaptiveStream: true, dynacast: true });
+
+    // Play the agent's voice.
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === Track.Kind.Audio) document.body.appendChild(track.attach());
+    });
+    room.on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()));
+
+    // Agent state (listening / thinking / speaking) drives the orb.
+    room.on(RoomEvent.ParticipantAttributesChanged, (_changed, participant) => {
+      if (participant.kind === ParticipantKind.AGENT) setAgentState(participant.attributes["lk.agent.state"]);
+    });
+
+    // Live transcripts for both sides arrive as text streams on "lk.transcription".
+    // Each stream is one update to a segment; we accumulate its chunks and render the line.
+    room.registerTextStreamHandler("lk.transcription", async (reader, participantInfo) => {
+      const attrs = reader.info.attributes || {};
+      const segmentId = attrs["lk.segment_id"] || reader.info.id;
+      const isAgent = participantInfo.identity !== room.localParticipant.identity;
+      const final = attrs["lk.transcription_final"] === "true";
+      let text = "";
+      for await (const chunk of reader) {
+        text += chunk;
+        upsertLine(segmentId, isAgent, text, final);
+      }
+      upsertLine(segmentId, isAgent, text, final || isAgent);
+    });
+
+    room.on(RoomEvent.Disconnected, () => reset("Disconnected."));
+
+    await room.connect(url, token);
+    await room.startAudio();
+    await room.localParticipant.setMicrophoneEnabled(true);
+    mode = "live";
+    setButton("❚❚&nbsp; Pause");
+    statusEl.textContent = "Waiting for tutor…";
+  } catch (err) {
+    console.error(err);
+    reset("Couldn't connect: " + err.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function setPaused(paused) {
+  button.disabled = true;
+  try {
+    await room.localParticipant.setMicrophoneEnabled(!paused);
+    const agent = agentParticipant();
+    if (agent) {
+      await room.localParticipant.performRpc({
+        destinationIdentity: agent.identity, method: "set_paused", payload: JSON.stringify({ paused }),
+      });
+    }
+    mode = paused ? "paused" : "live";
+    if (paused) {
+      orb.className = "orb";
+      statusEl.textContent = "Paused";
+      setButton("▶&nbsp; Resume", "paused");
+    } else {
+      setButton("❚❚&nbsp; Pause");
+      setAgentState(agent?.attributes["lk.agent.state"] || "listening");
+    }
+  } catch (err) {
+    console.error(err);
+    errorEl.textContent = "Pause failed: " + err.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function reset(message) {
+  mode = "idle";
+  orb.className = "orb";
+  statusEl.textContent = message || "Press Start to begin";
+  setButton("▶&nbsp; Start");
+  room = null;
+}
+
+button.addEventListener("click", () => {
+  if (mode === "idle") start();
+  else if (mode === "live") setPaused(true);
+  else setPaused(false);
+});
+</script>
+</body>
+</html>
