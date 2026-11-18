@@ -236,6 +236,13 @@ describing a learner who mispronounces words. Full transcripts are in
   stayed whole. (The hesitant clip passed either way: my pauses weren't long enough to trigger it.)
 - **Limits of this run:** one speaker, nine clips, one run each. Enough to find failure modes and
   compare configurations, not to measure rates. That's what the full test set in the plan is for.
+- **In the demo:** the **Evaluations** tab shows the tutor's own use cases under the tutor's
+  settings (Mandarin and the four-language sentence belong to the interpreter), with each
+  recording playable.
+- **Next step: let the customer test it themselves.** A "test it yourself" panel in that tab:
+  type the phrase, record it or upload the customer's own learner recordings, and get the same
+  real-time transcription and pass/fail as `evals/run.py`. In a real evaluation, the customer's
+  own audio is what convinces them.
 
 ---
 

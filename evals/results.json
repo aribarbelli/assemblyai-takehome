@@ -1,0 +1,355 @@
+{
+ "run_at": "2026-11-18 00:28",
+ "model": "assemblyai-stt-3-7-realtime-agent",
+ "configs": [
+  "tutor",
+  "tutor + taught words",
+  "preset turn timing",
+  "tutor + learner context",
+  "all 32 languages"
+ ],
+ "clips": [
+  {
+   "name": "question_biblioteca",
+   "say": "How do I say biblioteca in a sentence?",
+   "bucket": "Question with an embedded foreign word",
+   "results": {
+    "tutor": {
+     "turns": [
+      "How do I say biblioteca in a sentence?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "preset turn timing": {
+     "turns": [
+      "How do I say biblioteca in a sentence?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + learner context": {
+     "turns": [
+      "How do I say biblioteca in a sentence?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "all 32 languages": {
+     "turns": [
+      "How do I say biblioteca in a sentence?"
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "question_el_perro",
+   "say": "Why is it el perro and not la perro?",
+   "bucket": "Question with an embedded foreign word",
+   "results": {
+    "tutor": {
+     "turns": [
+      "Why is it el perro and not la perro?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "preset turn timing": {
+     "turns": [
+      "Why is it el perro and not la perro?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + learner context": {
+     "turns": [
+      "Why is it el perro and not la perro?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "all 32 languages": {
+     "turns": [
+      "Why is it el perro and not la perro?"
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "attempt_es_correct",
+   "say": "¿Dónde está la biblioteca?",
+   "bucket": "Learner attempt, correct",
+   "results": {
+    "tutor": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + taught words": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "preset turn timing": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + learner context": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "all 32 languages": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "attempt_es_wrong",
+   "say": "¿Dónde está la bibliotica?   (say it wrong on purpose: bib-lio-TI-ca)",
+   "bucket": "Learner attempt, incorrect (false acceptance)",
+   "results": {
+    "tutor": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": false,
+     "why": "missing 'bibliotica'; auto-corrected to 'biblioteca'"
+    },
+    "tutor + taught words": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": false,
+     "why": "missing 'bibliotica'; auto-corrected to 'biblioteca'"
+    },
+    "preset turn timing": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": false,
+     "why": "missing 'bibliotica'; auto-corrected to 'biblioteca'"
+    },
+    "tutor + learner context": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": false,
+     "why": "missing 'bibliotica'; auto-corrected to 'biblioteca'"
+    },
+    "all 32 languages": {
+     "turns": [
+      "¿Dónde está la biblioteca?"
+     ],
+     "ok": false,
+     "why": "missing 'bibliotica'; auto-corrected to 'biblioteca'"
+    }
+   }
+  },
+  {
+   "name": "attempt_pt_correct",
+   "say": "Eu preciso de um advogado.",
+   "bucket": "Learner attempt, correct (the 'advocado' case)",
+   "results": {
+    "tutor": {
+     "turns": [
+      "Eu preciso de um advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + taught words": {
+     "turns": [
+      "Eu preciso de um advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "preset turn timing": {
+     "turns": [
+      "Eu preciso de um advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + learner context": {
+     "turns": [
+      "Eu preciso de um advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "all 32 languages": {
+     "turns": [
+      "Eu preciso de um advogado."
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "single_word_advogado",
+   "say": "Advogado.",
+   "bucket": "Single-word turn",
+   "results": {
+    "tutor": {
+     "turns": [
+      "Advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + taught words": {
+     "turns": [
+      "Advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "preset turn timing": {
+     "turns": [
+      "Advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + learner context": {
+     "turns": [
+      "Advogado."
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "all 32 languages": {
+     "turns": [
+      "Advogado."
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "attempt_zh_correct",
+   "say": "我想去图书馆。   (Wǒ xiǎng qù túshūguǎn)",
+   "bucket": "Learner attempt, correct (Mandarin)",
+   "results": {
+    "tutor": {
+     "turns": [],
+     "ok": false,
+     "why": "missing '图书馆'"
+    },
+    "tutor + taught words": {
+     "turns": [],
+     "ok": false,
+     "why": "missing '图书馆'"
+    },
+    "preset turn timing": {
+     "turns": [],
+     "ok": false,
+     "why": "missing '图书馆'"
+    },
+    "tutor + learner context": {
+     "turns": [],
+     "ok": false,
+     "why": "missing '图书馆'"
+    },
+    "all 32 languages": {
+     "turns": [
+      "我想去图书馆。"
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "hesitant",
+   "say": "How do you say... um... the thing you pay at a restaurant... the bill?   (pause ~1 s at each '...')",
+   "bucket": "Hesitant speech (premature end-of-turn)",
+   "results": {
+    "tutor": {
+     "turns": [
+      "How do you say, um, the thing you pay at a restaurant? The bill?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "preset turn timing": {
+     "turns": [
+      "How do you say, um, the thing you pay at a restaurant? The bill?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "tutor + learner context": {
+     "turns": [
+      "How do you say, um, the thing you pay at a restaurant? The bill?"
+     ],
+     "ok": true,
+     "why": ""
+    },
+    "all 32 languages": {
+     "turns": [
+      "How do you say, um, the thing you pay at a restaurant? The bill?"
+     ],
+     "ok": true,
+     "why": ""
+    }
+   }
+  },
+  {
+   "name": "mixed_four_languages",
+   "say": "Yesterday I went to the mercado, comprei umas frutas, 但是太贵了.",
+   "bucket": "Code-switching, four languages",
+   "results": {
+    "tutor": {
+     "turns": [
+      "Yesterday I went to the mercado, comprei umas frutas, dan si, tai guela."
+     ],
+     "ok": false,
+     "why": "missing '太贵'"
+    },
+    "preset turn timing": {
+     "turns": [
+      "Yesterday I went to the mercado, compré unas frutas."
+     ],
+     "ok": false,
+     "why": "missing 'comprei'; missing '太贵'"
+    },
+    "tutor + learner context": {
+     "turns": [
+      "Yesterday I went to the mercado, comprei umas frutas, dan si, tai guela."
+     ],
+     "ok": false,
+     "why": "missing '太贵'"
+    },
+    "all 32 languages": {
+     "turns": [
+      "Yesterday I went to the mercado, comprei umas frutas, dan si, tai guela."
+     ],
+     "ok": false,
+     "why": "missing '太贵'"
+    }
+   }
+  }
+ ]
+}

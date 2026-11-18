@@ -146,6 +146,31 @@ def score(clip: dict, turns: list[str]) -> tuple[bool, str]:
     return (not problems, "; ".join(problems))
 
 
+def write_json(clips: list[dict], by_clip: dict) -> None:
+    """The same results for the web UI's Evaluations tab."""
+    data = {
+        "run_at": f"{datetime.now():%Y-%m-%d %H:%M}",
+        "model": TUTOR["speech_model"],
+        "configs": list(CONFIGS),
+        "clips": [
+            {
+                "name": clip["name"],
+                "say": clip["say"],
+                "bucket": clip["bucket"],
+                "results": {
+                    config: {"turns": turns, "ok": ok, "why": why}
+                    for config in CONFIGS
+                    if (clip["name"], config) in by_clip
+                    for turns, ok, why in [by_clip[(clip["name"], config)]]
+                },
+            }
+            for clip in clips
+        ],
+    }
+    path = Path(__file__).parent / "results.json"
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=1))
+
+
 async def main() -> None:
     clips = [c for c in CLIPS if (CLIP_DIR / f"{c['name']}.wav").exists()]
     missing = [c["name"] for c in CLIPS if c not in clips]
@@ -215,6 +240,7 @@ async def main() -> None:
         lines.append("")
     out = Path(__file__).parent / "results.md"
     out.write_text("\n".join(lines))
+    write_json(clips, by_clip)
     print(f"\nPassed: " + ", ".join(f"{c} {t}/{n}" for c, t, n in zip(CONFIGS, totals, counts)))
     print(f"Wrote {out}")
 

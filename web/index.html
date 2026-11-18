@@ -98,6 +98,36 @@
   button#interp-toggle:disabled { opacity: 0.6; cursor: default; }
   button#interp-toggle.live { background: #c2334d; box-shadow: 0 6px 24px rgba(194, 51, 77, 0.45); }
   .interp-status { color: var(--muted); font-size: 13px; min-height: 16px; text-align: center; }
+  /* ---- Evaluations tab ---- */
+  main#view-evals { max-width: 1100px; overflow-y: auto; }
+  .evals-head { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .evals-head h2 { margin: 0; font-size: 22px; }
+  .evals-head p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 760px; }
+  .finding {
+    width: 100%; border: 1px solid rgba(255, 122, 156, 0.35); background: rgba(255, 122, 156, 0.06);
+    border-radius: 14px; padding: 14px 18px; font-size: 14px; line-height: 1.55;
+  }
+  .finding b { color: #ff9db5; }
+  .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
+  table.evals { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.evals th, table.evals td { padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.evals th { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8ea4ff; white-space: nowrap; }
+  table.evals th:first-child, table.evals td:first-child { text-align: left; }
+  table.evals tr.clip { cursor: pointer; }
+  table.evals tr.clip:hover { background: rgba(255, 255, 255, 0.03); }
+  table.evals .said { font-size: 15px; }
+  table.evals .bucket { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  table.evals .cell { font-size: 18px; }
+  table.evals tr.detail td { text-align: left; background: rgba(0, 0, 0, 0.25); font-size: 13px; color: var(--muted); }
+  table.evals tr.detail ul { margin: 0; padding-left: 18px; line-height: 1.7; }
+  table.evals tr.detail b { color: var(--text); font-weight: 500; }
+  table.evals tr.total td { font-weight: 600; border-bottom: none; }
+  .play {
+    font: inherit; font-size: 12px; color: white; cursor: pointer; margin-right: 8px; vertical-align: middle;
+    width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--blue);
+  }
+  .play.playing { background: #c2334d; }
+  .evals-note { color: var(--muted); font-size: 12px; line-height: 1.5; width: 100%; }
   @media (max-width: 480px) {
     header { padding: 14px 16px; }
     .tabs button { padding: 6px 10px; font-size: 12px; }
@@ -239,9 +269,25 @@
   <img src="/logo.svg" alt="AssemblyAI">
   <nav class="tabs" role="tablist">
     <button role="tab" id="tab-tutor" data-view="tutor" aria-selected="true">Language Tutor</button>
+    <button role="tab" id="tab-evals" data-view="evals" aria-selected="false">Evaluations</button>
     <button role="tab" id="tab-extra" data-view="extra" aria-selected="false">Extra Credit</button>
   </nav>
 </header>
+<main id="view-evals" class="view" hidden>
+  <div class="evals-head">
+    <h2>Evaluation: how the tutor's speech-to-text handles learners</h2>
+    <p>Each clip is a learner doing what this product's users do: asking about a word, or trying a
+       phrase. It's streamed through AssemblyAI's real-time model at speaking pace with the tutor's
+       exact settings. Click a row to see the transcripts; ▶ plays the recording.</p>
+  </div>
+  <div class="finding">
+    <b>Key finding:</b> a deliberately wrong <i>“bibliotica”</i> comes back as “biblioteca” in every
+    configuration tried, with word confidence 1.0, so the tutor would praise it. Speech-to-text tells the
+    tutor <i>which</i> words were said, not <i>how well</i>: pronunciation grading needs its own model.
+  </div>
+  <div class="table-wrap"><table class="evals" id="evals-table"></table></div>
+  <div class="evals-note" id="evals-note"></div>
+</main>
 <main id="view-extra" class="view" hidden>
   <div class="interp-head">
     <h2>Stump the Interpreter</h2>
@@ -506,7 +552,7 @@ summaryBtn.addEventListener("click", openSummary);
 document.getElementById("summary-refresh").addEventListener("click", loadSummary);
 document.getElementById("summary-close").addEventListener("click", closeSummary);
 summaryEl.addEventListener("click", (e) => { if (e.target === summaryEl) closeSummary(); });
-showView(location.hash === "#extra" ? "extra" : "tutor");
+showView(["#extra", "#evals"].includes(location.hash) ? location.hash.slice(1) : "tutor");
 // ---- Extra Credit: Stump the Interpreter ----
 // No LiveKit and no agent process here:
 //   mic -> Streaming STT WebSocket, relayed by server.py (code-switching + language detection +
@@ -747,6 +793,85 @@ async function speakEnglish(text) {
 }
 
 interpBtn.addEventListener("click", () => (interp.ws ? stopInterpreter() : startInterpreter()));
+// ---- Evaluations tab: results of evals/run.py (served by server.py) ----
+const CONFIG_LABELS = {
+  "tutor": "Tutor",
+  "tutor + taught words": "+ Taught words",
+  "preset turn timing": "Default turn timing",
+  "tutor + learner context": "+ Learner context",
+  "all 32 languages": "All 32 languages",
+};
+// The tab shows what this customer is evaluating: the tutor's own settings, on its own use cases.
+// Mandarin and the four-language sentence belong to the interpreter; other configurations are
+// tuning experiments (all of them are in evals/results.md).
+const TAB_CONFIGS = ["tutor", "tutor + taught words"];
+const TAB_HIDDEN_CLIPS = ["attempt_zh_correct", "mixed_four_languages"];
+let evalsLoaded = false;
+let evalAudio = null;
+
+async function loadEvals() {
+  if (evalsLoaded) return;
+  const table = document.getElementById("evals-table");
+  try {
+    const res = await fetch("/evals/results");
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    evalsLoaded = true;
+    data.configs = data.configs.filter((c) => TAB_CONFIGS.includes(c));
+    data.clips = data.clips.filter((c) => !TAB_HIDDEN_CLIPS.includes(c.name));
+    const head = `<tr><th>Clip</th>${data.configs.map((c) => `<th>${CONFIG_LABELS[c] || c}</th>`).join("")}</tr>`;
+    const rows = data.clips.map((clip, i) => {
+      const said = escapeHtml(clip.say.split("   (")[0]);
+      const cells = data.configs.map((c) => {
+        const r = clip.results[c];
+        if (!r) return `<td class="cell" title="Not applicable">–</td>`;
+        return `<td class="cell" title="${escapeHtml(r.ok ? "Passed" : r.why)}">${r.ok ? "✅" : "❌"}</td>`;
+      }).join("");
+      const play = clip.has_audio ? `<button class="play" data-clip="${clip.name}" title="Play the recording">▶</button>` : "";
+      const transcripts = data.configs.filter((c) => clip.results[c]).map((c) => {
+        const r = clip.results[c];
+        const text = r.turns.length ? r.turns.map((t) => `“${escapeHtml(t)}”`).join(" ⏎ ") : "(nothing transcribed)";
+        return `<li><b>${CONFIG_LABELS[c] || c}:</b> ${text}${r.ok ? "" : ` <span style="color:#ff9db5">: ${escapeHtml(r.why)}</span>`}</li>`;
+      }).join("");
+      return `<tr class="clip" data-row="${i}"><td>${play}<span class="said">${said}</span><div class="bucket">${escapeHtml(clip.bucket)}</div></td>${cells}</tr>
+        <tr class="detail" data-detail="${i}" hidden><td colspan="${data.configs.length + 1}"><ul>${transcripts}</ul></td></tr>`;
+    }).join("");
+    const totals = data.configs.map((c) => {
+      const scored = data.clips.filter((clip) => clip.results[c]);
+      return `<td>${scored.filter((clip) => clip.results[c].ok).length}/${scored.length}</td>`;
+    }).join("");
+    table.innerHTML = head + rows + `<tr class="total"><td>Passed</td>${totals}</tr>`;
+    document.getElementById("evals-note").textContent =
+      `Run ${data.run_at} · ${data.model} · one speaker, ${data.clips.length} clips: enough to find failure modes, ` +
+      `not to measure rates. “+ Taught words” only applies after a lesson, so questions show “–”. ` +
+      `More configurations and clips in evals/results.md; code in evals/run.py.`;
+  } catch (err) {
+    table.innerHTML = `<tr><td>Couldn't load results: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById("evals-table").addEventListener("click", (e) => {
+  const play = e.target.closest(".play");
+  if (play) {
+    e.stopPropagation();
+    const wasPlaying = play.classList.contains("playing");
+    evalAudio?.pause();
+    document.querySelectorAll(".play.playing").forEach((b) => { b.classList.remove("playing"); b.textContent = "▶"; });
+    if (wasPlaying) return;
+    evalAudio = new Audio(`/evals/clips/${play.dataset.clip}.wav`);
+    play.classList.add("playing"); play.textContent = "■";
+    evalAudio.onended = () => { play.classList.remove("playing"); play.textContent = "▶"; };
+    evalAudio.play();
+    return;
+  }
+  const row = e.target.closest("tr.clip");
+  if (row) {
+    const detail = document.querySelector(`tr[data-detail="${row.dataset.row}"]`);
+    detail.hidden = !detail.hidden;
+  }
+});
+document.getElementById("tab-evals").addEventListener("click", loadEvals);
+if (location.hash === "#evals") loadEvals();
 </script>
 </body>
 </html>

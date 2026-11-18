@@ -15,6 +15,7 @@ from livekit import api
 load_dotenv()
 
 WEB_DIR = Path(__file__).parent / "web"
+EVALS_DIR = Path(__file__).parent / "evals"
 LOGO = Path(__file__).parent / "assemblyai-logo.svg"
 
 
@@ -147,11 +148,33 @@ async def interpreter_ws(request: web.Request) -> web.WebSocketResponse:
     return browser
 
 
+async def eval_results(_: web.Request) -> web.Response:
+    """The latest evals/run.py results, plus which clips have a local recording to play."""
+    path = EVALS_DIR / "results.json"
+    if not path.exists():
+        raise web.HTTPNotFound(text="No results yet: run python evals/run.py")
+    data = json.loads(path.read_text())
+    for clip in data["clips"]:
+        clip["has_audio"] = (EVALS_DIR / "clips" / f"{clip['name']}.wav").exists()
+    return web.json_response(data)
+
+
+async def eval_clip(request: web.Request) -> web.FileResponse:
+    # Recordings are local only (gitignored). Names are restricted to the clip-name pattern.
+    name = request.match_info["name"]
+    path = EVALS_DIR / "clips" / f"{name}.wav"
+    if not path.exists():
+        raise web.HTTPNotFound()
+    return web.FileResponse(path)
+
+
 app = web.Application()
 app.router.add_get("/token", token)
 app.router.add_get("/assemblyai-token", assemblyai_token)
 app.router.add_post("/interpreter/translate", interpreter_translate)
 app.router.add_get("/interpreter/ws", interpreter_ws)
+app.router.add_get("/evals/results", eval_results)
+app.router.add_get(r"/evals/clips/{name:[a-z0-9_]+}.wav", eval_clip)
 app.router.add_get("/", lambda _: web.FileResponse(WEB_DIR / "index.html"))
 app.router.add_get("/logo.svg", lambda _: web.FileResponse(LOGO))
 
