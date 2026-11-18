@@ -149,6 +149,7 @@ from me first, with a plan.
 | **TTS speaks 6 languages** (en, es, fr, de, it, pt) while STT understands 32 | Learners of Japanese, Mandarin, Korean, etc. can be understood but not spoken to | Route those languages to their current TTS. The reference agent already runs one TTS per language, so this is a routing table entry, not a redesign. Ask for the TTS language roadmap. |
 | TTS doesn't detect language; one session speaks one language | Mixed-language replies need per-segment routing | Solved in the reference agent (`language_tts.py`): LLM tags + a session per language. Hand this over as code they can reuse. |
 | LiveKit plugin sends no TTS `KeepAlive` | Idle sessions drop after 120 s: reconnect delay, lost audio after long pauses | Fixed in the reference agent; report upstream so the plugin fixes it for everyone. |
+| Temporary-token STT sessions stop returning built-in translations after 10 turns (found building the extra-credit interpreter; not documented) | A browser app using real-time translation the documented way breaks silently mid-conversation | Relay the session server-side with the API key (done in `server.py`); report it and get it fixed or documented |
 | Word-level transcript alignment lost with multiple TTS sessions | After a barge-in, history may include a few unheard words | Minor; acceptable, or fixable by merging word timings across sessions. |
 
 ---

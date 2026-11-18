@@ -23,6 +23,7 @@ from livekit.plugins import assemblyai, openai, silero
 
 from language_tts import NATIVE_VOICES, LanguageRouter
 from prompts import GREETING, TUTOR_INSTRUCTIONS
+from usage import ConversationStats
 
 load_dotenv()
 logger = logging.getLogger("tutor")
@@ -69,6 +70,7 @@ async def entrypoint(ctx: JobContext) -> None:
     router.prewarm()  # English only; other languages connect on first use (see LanguageRouter)
     router.start_keepalive()  # hold idle TTS sessions open (AssemblyAI closes them after 120 s)
     ctx.add_shutdown_callback(router.aclose)
+    stats = ConversationStats(LLM_MODEL)
 
     session = AgentSession(
         stt=assemblyai.STT(
@@ -128,10 +130,22 @@ async def entrypoint(ctx: JobContext) -> None:
     @session.on("metrics_collected")
     def _on_metrics(ev) -> None:
         metrics.log_metrics(ev.metrics)
+        stats.on_metrics(ev.metrics)
+
+    # LiveKit attaches each turn's latency breakdown to the conversation items themselves.
+    @session.on("conversation_item_added")
+    def _on_item(ev) -> None:
+        stats.on_message(ev.item)
+
+    # The summary panel in the web UI: estimated cost and latency for this conversation.
+    async def get_summary(_: rtc.RpcInvocationData) -> str:
+        stats.tts_characters = router.characters_sent
+        return json.dumps(stats.summary())
 
     await session.start(agent=Tutor(router), room=ctx.room)
     # Registering requires a connected room, which session.start() takes care of.
     ctx.room.local_participant.register_rpc_method("set_paused", set_paused)
+    ctx.room.local_participant.register_rpc_method("get_summary", get_summary)
 
 
 if __name__ == "__main__":

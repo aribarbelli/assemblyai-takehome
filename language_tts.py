@@ -65,6 +65,7 @@ class LanguageRouter:
             BASE_LANGUAGE: assemblyai.TTS(model="assemblyai-tts-1", voice=BASE_VOICE)
         }
         self._keepalive_task: asyncio.Task[None] | None = None
+        self.characters_sent = 0  # TTS is billed per character; feeds the cost estimate
 
     def start_keepalive(self) -> None:
         if self._keepalive_task is None:
@@ -123,6 +124,7 @@ class LanguageRouter:
         async def forward() -> None:
             while (chunk := await segment.chunks.get()) is not None:
                 stream.push_text(chunk)
+                self.characters_sent += len(chunk)
             stream.end_input()
 
         forwarder = asyncio.create_task(forward())

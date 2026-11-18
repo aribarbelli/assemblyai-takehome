@@ -30,7 +30,85 @@
     padding: 18px 28px; border-bottom: 1px solid var(--border);
   }
   header img { height: 22px; display: block; }
-  header .product { color: var(--muted); font-size: 14px; letter-spacing: 0.02em; }
+  /* Tab switch in the header: Language Tutor / Extra Credit */
+  .tabs {
+    display: flex; gap: 4px; padding: 4px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--border);
+  }
+  .tabs button {
+    font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; letter-spacing: 0.02em;
+    padding: 6px 14px; border-radius: 999px; border: none; background: transparent;
+    transition: background 0.2s, color 0.2s;
+  }
+  .tabs button:hover { color: var(--text); }
+  .tabs button[aria-selected="true"] { background: var(--blue); color: white; }
+  .view[hidden] { display: none !important; }
+  /* Split layout: orb + button on the left, transcript on the right.
+     To go back to the stacked layout, remove class="split" from <main id="view-tutor">. */
+  main.split {
+    max-width: 1100px; padding: 32px 28px 28px;
+    display: grid; grid-template-columns: minmax(260px, 340px) 1fr;
+    grid-template-rows: 1fr auto auto auto 1fr; column-gap: 40px; row-gap: 24px;
+  }
+  main.split .orb-wrap { grid-column: 1; grid-row: 2; }
+  main.split #toggle   { grid-column: 1; grid-row: 3; justify-self: center; }
+  main.split .error    { grid-column: 1; grid-row: 4; }
+  main.split .transcript { grid-column: 2; grid-row: 1 / -1; min-height: 0; height: 100%; }
+  main.split .orb { width: 160px; height: 160px; }
+  @media (max-width: 800px) { /* too narrow for two columns: fall back to stacked */
+    main.split { display: flex; max-width: 720px; padding: 32px 20px 28px; }
+    main.split .transcript { min-height: 200px; }
+    main.split .orb { width: 120px; height: 120px; }
+  }
+
+  /* ---- Extra Credit: interpreter ---- */
+  :root { --lang-en: #8ea4ff; --lang-es: #ffb86b; --lang-pt: #6be3a4; --lang-zh: #ff7a9c; --lang-other: #c7c3b2; }
+  .interp-head { text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .interp-head h2 { margin: 0; font-size: 22px; }
+  .interp-head p { margin: 0; color: var(--muted); font-size: 14px; max-width: 520px; line-height: 1.5; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .chip {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor;
+    background: rgba(255,255,255,0.03);
+  }
+  .score { display: flex; gap: 28px; justify-content: center; font-variant-numeric: tabular-nums; }
+  .score div { text-align: center; }
+  .score b { display: block; font-size: 28px; }
+  .score span { color: var(--muted); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .interp-feed {
+    width: 100%; flex: 1; min-height: 200px; overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .interp-feed .empty { color: var(--muted); font-size: 14px; margin: auto; text-align: center; max-width: 420px; line-height: 1.5; }
+  .turn-card { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .turn-card:last-child { border-bottom: none; padding-bottom: 0; }
+  .turn-card .original { font-size: 16px; line-height: 1.6; }
+  .turn-card .original.live { color: var(--muted); }
+  .turn-card .english { font-size: 18px; font-weight: 600; line-height: 1.5; }
+  .turn-card .english.pending { color: var(--muted); font-weight: 400; font-size: 14px; }
+  .turn-card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 12px; }
+  .seg { border-bottom: 2px solid currentColor; padding-bottom: 1px; }
+  button#interp-toggle {
+    font: inherit; font-size: 16px; font-weight: 600; color: white; cursor: pointer;
+    padding: 14px 40px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15);
+    background: var(--blue); box-shadow: 0 6px 24px var(--blue-glow); min-width: 220px;
+  }
+  button#interp-toggle:hover { background: #5577ff; }
+  button#interp-toggle:disabled { opacity: 0.6; cursor: default; }
+  button#interp-toggle.live { background: #c2334d; box-shadow: 0 6px 24px rgba(194, 51, 77, 0.45); }
+  .interp-status { color: var(--muted); font-size: 13px; min-height: 16px; text-align: center; }
+  @media (max-width: 480px) {
+    header { padding: 14px 16px; }
+    .tabs button { padding: 6px 10px; font-size: 12px; }
+  }
+  .placeholder {
+    flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; text-align: center; color: var(--muted);
+    border: 1px dashed var(--border); border-radius: 14px; padding: 40px 20px;
+  }
+  .placeholder h2 { margin: 0; color: var(--text); font-size: 20px; }
+  .placeholder p { margin: 0; max-width: 420px; line-height: 1.5; font-size: 14px; }
   main {
     flex: 1; width: 100%; max-width: 720px; margin: 0 auto;
     padding: 32px 20px 28px; display: flex; flex-direction: column; align-items: center; gap: 24px;
@@ -80,14 +158,110 @@
   button#toggle:disabled { opacity: 0.6; cursor: default; }
   button#toggle.paused { background: transparent; box-shadow: none; }
   .error { color: #ff8a8a; font-size: 13px; min-height: 16px; text-align: center; }
+
+  /* Intro screen */
+  #intro {
+    position: fixed; inset: 0; z-index: 20; background: #000; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px;
+    transition: opacity 0.6s ease;
+  }
+  #intro img { width: min(340px, 70vw); height: auto; }
+  #intro .prompt {
+    color: var(--muted); font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  #intro .prompt kbd {
+    font: inherit; color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 8px; margin: 0 2px;
+  }
+  #intro.hidden { opacity: 0; pointer-events: none; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+
+  /* Summary button + panel */
+  button#summary-btn {
+    position: fixed; right: 24px; bottom: 24px; z-index: 5;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer;
+    padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border);
+    background: rgba(10, 20, 51, 0.85); backdrop-filter: blur(8px);
+  }
+  button#summary-btn:hover { border-color: var(--blue); }
+  button#summary-btn:disabled { opacity: 0.4; cursor: default; border-color: var(--border); }
+  #summary {
+    position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.6);
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #summary.open { display: flex; }
+  #summary .card {
+    width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto;
+    background: #070d22; border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+  #summary h2 { margin: 0 0 4px; font-size: 18px; }
+  #summary .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  #summary h3 {
+    margin: 20px 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #8ea4ff;
+  }
+  #summary .big { font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #summary .big small { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+  #summary table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  #summary td { padding: 6px 0; border-top: 1px solid var(--border); }
+  #summary td.num { text-align: right; }
+  #summary td.detail { color: var(--muted); font-size: 12px; }
+  #summary tr.total td { font-weight: 600; }
+  #summary .note { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 16px; }
+  #summary .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  #summary .actions button {
+    font: inherit; font-size: 14px; color: var(--text); cursor: pointer;
+    padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border); background: transparent;
+  }
+  #summary .actions button.primary { background: var(--blue); border-color: transparent; }
 </style>
 </head>
 <body>
+<div id="intro" role="button" tabindex="0" aria-label="Begin the demo">
+  <img src="/logo.svg" alt="AssemblyAI">
+  <div class="prompt">Press <kbd>Enter</kbd> to begin the demo</div>
+</div>
+<button id="summary-btn" disabled>Cost &amp; latency</button>
+<div id="summary" role="dialog" aria-modal="true" aria-labelledby="summary-title">
+  <div class="card">
+    <h2 id="summary-title">This conversation</h2>
+    <div id="summary-sub" class="sub"></div>
+    <div id="summary-body"></div>
+    <div class="actions">
+      <button id="summary-refresh">Refresh</button>
+      <button id="summary-close" class="primary">Close</button>
+    </div>
+  </div>
+</div>
 <header>
   <img src="/logo.svg" alt="AssemblyAI">
-  <span class="product">Language Tutor</span>
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-tutor" data-view="tutor" aria-selected="true">Language Tutor</button>
+    <button role="tab" id="tab-extra" data-view="extra" aria-selected="false">Extra Credit</button>
+  </nav>
 </header>
-<main>
+<main id="view-extra" class="view" hidden>
+  <div class="interp-head">
+    <h2>Stump the Interpreter</h2>
+    <p>AssemblyAI's real-time model understands 32 languages, even mixed in the same sentence.
+       Mix as many as you can, and watch it transcribe you as you speak, translate it into English,
+       and read the translation back.</p>
+  </div>
+  <div class="score">
+    <div><b id="score-last">–</b><span>Languages, last sentence</span></div>
+    <div><b id="score-best">–</b><span>Best</span></div>
+    <div><b id="score-latency">–</b><span>Translation time</span></div>
+  </div>
+  <div id="interp-feed" class="interp-feed">
+    <div class="empty">Press Start, then try something like<br>
+      “Yesterday I went to the <i>mercado</i>, <i>comprei umas frutas</i>, <i>但是太贵了</i>.”</div>
+  </div>
+  <button id="interp-toggle">▶&nbsp; Start interpreting</button>
+  <div id="interp-status" class="interp-status"></div>
+</main>
+<main id="view-tutor" class="view split">
   <div class="orb-wrap">
     <div id="orb" class="orb"></div>
     <div id="status" class="status">Press Start to begin</div>
@@ -192,6 +366,7 @@ async function start() {
     await room.startAudio();
     await room.localParticipant.setMicrophoneEnabled(true);
     mode = "live";
+    summaryBtn.disabled = false;
     setButton("❚❚&nbsp; Pause");
     statusEl.textContent = "Waiting for tutor…";
   } catch (err) {
@@ -231,6 +406,7 @@ async function setPaused(paused) {
 
 function reset(message) {
   mode = "idle";
+  summaryBtn.disabled = true;
   orb.className = "orb";
   statusEl.textContent = message || "Press Start to begin";
   setButton("▶&nbsp; Start");
@@ -242,6 +418,335 @@ button.addEventListener("click", () => {
   else if (mode === "live") setPaused(true);
   else setPaused(false);
 });
+// ---- Tabs: Language Tutor / Extra Credit (remembered in the URL, e.g. #extra) ----
+const tabs = [...document.querySelectorAll(".tabs button")];
+function showView(name) {
+  for (const tab of tabs) {
+    const active = tab.dataset.view === name;
+    tab.setAttribute("aria-selected", active);
+    document.getElementById("view-" + tab.dataset.view).hidden = !active;
+  }
+  summaryBtn.hidden = name !== "tutor";
+  history.replaceState(null, "", name === "tutor" ? location.pathname : "#" + name);
+}
+tabs.forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
+
+// ---- Intro screen ----
+const intro = document.getElementById("intro");
+function enterDemo() {
+  if (intro.classList.contains("hidden")) return;
+  intro.classList.add("hidden");
+  setTimeout(() => button.focus(), 300);
+}
+intro.addEventListener("click", enterDemo);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !intro.classList.contains("hidden")) { e.preventDefault(); enterDemo(); }
+  if (e.key === "Escape") closeSummary();
+});
+intro.focus();
+
+// ---- Cost & latency summary ----
+const summaryBtn = document.getElementById("summary-btn");
+const summaryEl = document.getElementById("summary");
+const summarySub = document.getElementById("summary-sub");
+const summaryBody = document.getElementById("summary-body");
+
+const secs = (v) => (v == null ? "—" : v.toFixed(2) + " s");
+const usd = (v) => "$" + (v < 0.01 ? v.toFixed(4) : v.toFixed(3));
+const num = (v) => v.toLocaleString("en-US");
+
+function renderSummary(s) {
+  const mins = Math.floor(s.minutes), sec = Math.round((s.minutes - mins) * 60);
+  summarySub.textContent = `${mins}m ${String(sec).padStart(2, "0")}s · ${s.turns} tutor ${s.turns === 1 ? "reply" : "replies"}`;
+  const L = s.latency, u = s.usage, c = s.cost;
+  const row = (label, stat) => `<tr><td>${label}</td><td class="num">${secs(stat?.median)}</td><td class="num">${secs(stat?.max)}</td></tr>`;
+  summaryBody.innerHTML = `
+    <h3>Latency</h3>
+    <div class="big">${secs(L.total?.median)}<small>median, you stop talking → tutor starts</small></div>
+    <table>
+      <tr><td class="detail">Stage</td><td class="num detail">Median</td><td class="num detail">Slowest</td></tr>
+      ${row("Voice to voice", L.total)}
+      ${row("End-of-turn detection", L.end_of_turn)}
+      ${row("LLM first token", L.llm_first_token)}
+      ${row("TTS first audio", L.tts_first_audio)}
+    </table>
+    <h3>Estimated cost</h3>
+    <div class="big">${usd(c.total)}<small>${usd(s.cost_per_minute)} per minute</small></div>
+    <table>
+      <tr><td>Speech-to-text<div class="detail">${s.minutes.toFixed(1)} min streamed</div></td><td class="num">${usd(c.stt)}</td></tr>
+      <tr><td>LLM Gateway<div class="detail">${u.llm_model} · ${num(u.prompt_tokens)} in / ${num(u.completion_tokens)} out tokens</div></td><td class="num">${usd(c.llm)}</td></tr>
+      <tr><td>Text-to-speech<div class="detail">${num(u.tts_characters)} characters spoken</div></td><td class="num">${usd(c.tts)}</td></tr>
+      <tr class="total"><td>Total</td><td class="num">${usd(c.total)}</td></tr>
+    </table>
+    <div class="note">
+      Latency stages overlap, so they don't add up exactly to voice to voice. The greeting isn't counted.
+      Cost uses AssemblyAI list prices: STT billed per minute of open session (paused time included),
+      TTS per character, LLM per token. Free-plan credits aren't applied.
+    </div>`;
+}
+
+async function loadSummary() {
+  const agent = room && agentParticipant();
+  if (!agent) { summaryBody.innerHTML = '<div class="note">Start a conversation first.</div>'; return; }
+  summaryBody.innerHTML = '<div class="note">Loading…</div>';
+  try {
+    const payload = await room.localParticipant.performRpc({
+      destinationIdentity: agent.identity, method: "get_summary", payload: "",
+    });
+    renderSummary(JSON.parse(payload));
+  } catch (err) {
+    console.error(err);
+    summaryBody.innerHTML = `<div class="note">Couldn't load the summary: ${err.message}</div>`;
+  }
+}
+
+function openSummary() { summaryEl.classList.add("open"); loadSummary(); }
+function closeSummary() { summaryEl.classList.remove("open"); }
+summaryBtn.addEventListener("click", openSummary);
+document.getElementById("summary-refresh").addEventListener("click", loadSummary);
+document.getElementById("summary-close").addEventListener("click", closeSummary);
+summaryEl.addEventListener("click", (e) => { if (e.target === summaryEl) closeSummary(); });
+showView(location.hash === "#extra" ? "extra" : "tutor");
+// ---- Extra Credit: Stump the Interpreter ----
+// No LiveKit and no agent process here:
+//   mic -> Streaming STT WebSocket, relayed by server.py (code-switching + language detection +
+//   built-in LLM Gateway translation on the same socket) -> English text -> TTS HTTP API (Kyla),
+//   called directly from the page with a short-lived token -> speakers.
+// The API key never reaches the page.
+// Languages with their own highlight color (any other language gets a neutral one).
+const INTERP_LANGS = { en: "English", es: "Español", pt: "Português", zh: "中文" };
+const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", zh: "Mandarin", fr: "French", de: "German",
+  it: "Italian", ja: "Japanese", ko: "Korean", hi: "Hindi", ru: "Russian", ar: "Arabic", nl: "Dutch" };
+// The translation prompt and model live in server.py (shared by the relay and the fallback route).
+const TRANSLATION_FALLBACK_MS = 4000;
+
+const interpBtn = document.getElementById("interp-toggle");
+const interpStatus = document.getElementById("interp-status");
+const feed = document.getElementById("interp-feed");
+
+const interp = { ws: null, mic: null, ctx: null, playCtx: null, speakingUntil: 0, cards: new Map(), best: 0, live: null };
+
+const langColor = (code) => `var(--lang-${INTERP_LANGS[code] ? code : "other"})`;
+const escapeHtml = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+async function fetchAaiToken(product) {
+  const res = await fetch(`/assemblyai-token?product=${product}`);
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()).token;
+}
+
+// Mic -> 16 kHz mono PCM16, 50 ms per message. The AudioContext resamples the mic to 16 kHz.
+const WORKLET = `class Pcm extends AudioWorkletProcessor {
+  process(inputs) { const ch = inputs[0][0]; if (ch) this.port.postMessage(ch.slice(0)); return true; }
+}
+registerProcessor("pcm", Pcm);`;
+
+async function startMic(onChunk) {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  });
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" })));
+  const node = new AudioWorkletNode(ctx, "pcm");
+  const mute = ctx.createGain(); mute.gain.value = 0;
+  ctx.createMediaStreamSource(stream).connect(node).connect(mute).connect(ctx.destination);
+  let pending = [], size = 0;
+  node.port.onmessage = ({ data }) => {
+    pending.push(data); size += data.length;
+    if (size < 800) return;
+    const pcm = new Int16Array(size); let o = 0;
+    for (const chunk of pending) for (const v of chunk) pcm[o++] = Math.max(-1, Math.min(1, v)) * 0x7fff;
+    pending = []; size = 0;
+    onChunk(pcm);
+  };
+  return { stream, ctx };
+}
+
+async function startInterpreter() {
+  interpBtn.disabled = true;
+  interpStatus.textContent = "Connecting…";
+  try {
+    interp.playCtx = interp.playCtx || new AudioContext({ sampleRate: 24000 });
+    await interp.playCtx.resume();
+    const params = new URLSearchParams({
+      speech_model: "assemblyai-stt-3-7-realtime-agent",
+      sample_rate: "16000",
+      encoding: "pcm_s16le",
+      // No language_codes: the model listens for all 32 languages and code-switches between them.
+      language_detection: "true",                                  // report each turn's language
+      min_turn_silence: "800", max_turn_silence: "2500",           // room to think mid-sentence
+      // The translation prompt (llm_gateway) is added by server.py, which relays this session to
+      // AssemblyAI with the API key (temporary-token sessions stop translating after 10 turns).
+    });
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/interpreter/ws?${params}`);
+    ws.binaryType = "arraybuffer";
+    interp.ws = ws;
+    ws.onmessage = (e) => onInterpMessage(JSON.parse(e.data));
+    ws.onclose = (e) => {
+      if (interp.ws === ws) stopInterpreter(e.code === 1000 ? "" : `Connection closed (${e.code}${e.reason ? ": " + e.reason : ""})`);
+    };
+    await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = () => reject(new Error("WebSocket failed")); });
+    const silence = new Int16Array(800);
+    interp.mic = await startMic((pcm) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      // While the English translation plays, send silence so the mic doesn't transcribe it.
+      ws.send((interp.playCtx.currentTime < interp.speakingUntil ? silence : pcm).buffer);
+    });
+    feed.querySelector(".empty")?.remove();
+    interpBtn.innerHTML = "■&nbsp; Stop"; interpBtn.className = "live";
+    interpStatus.textContent = "Listening… mix your languages!";
+  } catch (err) {
+    console.error(err);
+    stopInterpreter("Couldn't start: " + err.message);
+  } finally {
+    interpBtn.disabled = false;
+  }
+}
+
+function stopInterpreter(message = "") {
+  const ws = interp.ws; interp.ws = null;
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "Terminate" }));
+  interp.mic?.stream.getTracks().forEach((t) => t.stop());
+  interp.mic?.ctx.close();
+  interp.mic = null;
+  interp.live?.remove(); interp.live = null;
+  interpBtn.innerHTML = "▶&nbsp; Start interpreting"; interpBtn.className = "";
+  interpStatus.textContent = message;
+}
+
+function newCard() {
+  const card = document.createElement("div");
+  card.className = "turn-card";
+  card.innerHTML = `<div class="original live"></div><div class="english pending"></div><div class="meta"></div>`;
+  feed.appendChild(card);
+  return card;
+}
+
+function onInterpMessage(msg) {
+  if (msg.type === "Turn") {
+    if (!msg.transcript) return;
+    interp.live = interp.live || newCard();
+    const card = interp.live;
+    card.querySelector(".original").textContent = msg.transcript;
+    if (msg.end_of_turn && msg.turn_is_formatted) {
+      card.querySelector(".original").classList.remove("live");
+      card.querySelector(".english").textContent = "Translating…";
+      const entry = { card, transcript: msg.transcript, language: msg.language_code, endedAt: performance.now(), done: false };
+      interp.cards.set(msg.turn_order, entry);
+      // AssemblyAI sends nothing if the translation call fails or times out, so don't wait forever.
+      entry.fallback = setTimeout(() => translateFallback(entry), TRANSLATION_FALLBACK_MS);
+      interp.live = null;
+    }
+    feed.scrollTop = feed.scrollHeight;
+  } else if (msg.type === "LLMGatewayResponse") {
+    onTranslation(msg);
+  } else if (msg.type === "Error" || msg.error) {
+    interpStatus.textContent = "Error: " + (msg.error || JSON.stringify(msg));
+  }
+}
+
+// The model returns {"english", "segments": [{lang, text}]}; fall back to plain text if it doesn't.
+function parseTranslation(content, entry) {
+  const text = content.replace(/```(json)?/g, "").trim();
+  try {
+    const parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+    if (typeof parsed.english === "string" && parsed.english.trim()) {
+      const segments = (Array.isArray(parsed.segments) ? parsed.segments : [])
+        .filter((s) => s && typeof s.text === "string")
+        .map((s) => ({ lang: typeof s.lang === "string" ? s.lang : "", text: s.text }));
+      return { english: parsed.english, segments };
+    }
+  } catch {}
+  return { english: text, segments: [{ lang: entry.language || "en", text: entry.transcript }] };
+}
+
+function onTranslation(msg) {
+  const entry = interp.cards.get(msg.turn_order);
+  if (entry) showTranslation(entry, msg.data?.choices?.[0]?.message?.content || "", "");
+}
+
+async function translateFallback(entry) {
+  if (entry.done) return;
+  console.warn("No translation from the STT session after", TRANSLATION_FALLBACK_MS, "ms; using fallback");
+  entry.card.querySelector(".english").textContent = "Translating… (retrying)";
+  try {
+    const res = await fetch("/interpreter/translate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: entry.transcript }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    showTranslation(entry, (await res.json()).content, " · via fallback");
+  } catch (err) {
+    console.error(err);
+    if (!entry.done) entry.card.querySelector(".english").textContent = "Translation failed: " + err.message;
+  }
+}
+
+function showTranslation(entry, content, note) {
+  if (entry.done) return; // the session's translation and the fallback can both arrive
+  entry.done = true;
+  clearTimeout(entry.fallback);
+  const elapsed = (performance.now() - entry.endedAt) / 1000;
+  const { english, segments } = parseTranslation(content, entry);
+  const segs = segments.filter((s) => s.text && /[\p{L}\p{N}]/u.test(s.text));
+  const langs = [...new Set(segs.map((s) => (s.lang || "").toLowerCase().slice(0, 2)))].filter(Boolean);
+
+  const { card } = entry;
+  if (segs.length) {
+    card.querySelector(".original").innerHTML = segs.map((s) => {
+      const code = (s.lang || "").toLowerCase().slice(0, 2);
+      return `<span class="seg" style="color:${langColor(code)}" title="${LANG_NAMES[code] || code}">${escapeHtml(s.text.trim())}</span>`;
+    }).join(" ");
+  }
+  const eng = card.querySelector(".english");
+  eng.textContent = english; eng.classList.remove("pending");
+  card.querySelector(".meta").insertAdjacentHTML("beforeend",
+    `${langs.length} ${langs.length === 1 ? "language" : "languages"}: ` +
+    langs.map((c) => `<span class="chip" style="color:${langColor(c)}">${LANG_NAMES[c] || c}</span>`).join(" ") +
+    ` · translated in ${elapsed.toFixed(2)} s${note}`);
+
+  interp.best = Math.max(interp.best, langs.length);
+  document.getElementById("score-last").textContent = langs.length;
+  document.getElementById("score-best").textContent = interp.best;
+  document.getElementById("score-latency").textContent = elapsed.toFixed(2) + " s";
+  feed.scrollTop = feed.scrollHeight;
+  speakEnglish(english).catch((err) => { console.error(err); interpStatus.textContent = "TTS failed: " + err.message; });
+}
+
+// TTS over HTTP: one request per translation, played as the audio streams in.
+async function speakEnglish(text) {
+  const ctx = interp.playCtx;
+  const res = await fetch("https://tts.us.assemblyai.com/v1/speech", {
+    method: "POST",
+    headers: { Authorization: await fetchAaiToken("tts"), "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice_id: "aai-kyla", language: "english" }),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  const rate = Number(res.headers.get("X-TTS-Sample-Rate")) || 24000;
+  let at = Math.max(ctx.currentTime + 0.05, interp.speakingUntil);
+  let carry = new Uint8Array(0);
+  const reader = res.body.getReader();
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const bytes = new Uint8Array(carry.length + value.length);
+    bytes.set(carry); bytes.set(value, carry.length);
+    const whole = bytes.length & ~1;
+    carry = bytes.slice(whole);
+    if (!whole) continue;
+    const pcm = new Int16Array(bytes.buffer, 0, whole / 2);
+    const buffer = ctx.createBuffer(1, pcm.length, rate);
+    buffer.copyToChannel(Float32Array.from(pcm, (v) => v / 32768), 0);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer; src.connect(ctx.destination);
+    at = Math.max(at, ctx.currentTime);
+    src.start(at);
+    at += buffer.duration;
+    interp.speakingUntil = at + 0.3; // keep the mic muted until just after playback ends
+  }
+}
+
+interpBtn.addEventListener("click", () => (interp.ws ? stopInterpreter() : startInterpreter()));
 </script>
 </body>
 </html>

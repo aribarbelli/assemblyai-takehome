@@ -8,6 +8,10 @@ Built as the reference implementation for a rip-and-replace evaluation: a custom
 language-learning voice agent on another provider is deciding whether to move to AssemblyAI.
 **The evaluation plan is in [`docs/evaluation-plan.md`](docs/evaluation-plan.md).**
 
+The page has two tabs: **Language Tutor** (the reference agent) and **Extra Credit**, a game called
+*Stump the Interpreter* that shows off mixed-language speech recognition
+([below](#extra-credit-stump-the-interpreter)).
+
 Every model in the loop runs on one AssemblyAI API key:
 
 | Stage | What | Model |
@@ -33,15 +37,18 @@ cp .env.example .env                      # then paste your key after ASSEMBLYAI
 ./run.sh                                  # starts LiveKit server + agent + web UI
 ```
 
-Open **http://localhost:8000**, press **Start**, allow the microphone, and ask something like
-*"How do I say 'where is the train station' in German?"*
+Open **http://localhost:8000** in Chrome, press **Enter** on the intro screen, press **Start**,
+allow the microphone, and ask something like *"How do I say 'where is the train station' in German?"*
 
 - **Pause** freezes the tutor mid-sentence and mutes your mic; **Resume** picks the sentence up
   where it stopped. To move on instead, just start talking: that interrupts it like any barge-in.
 - The transcript highlights foreign phrases, and shows written pronunciation hints
   (e.g. *beeb-lee-oh-TEH-kah*) that are displayed but never spoken.
-- Per-turn latency (end-of-turn delay, LLM time-to-first-token, TTS time-to-first-byte) is logged
-  to the terminal for every turn.
+- **Cost & latency** (bottom right) shows the conversation so far: median and slowest
+  voice-to-voice latency with its breakdown (end-of-turn detection, LLM first token, TTS first
+  audio), and the estimated cost of each model at list price, in total and per minute. See
+  [Cost and latency panel](#cost-and-latency-panel). The same latency numbers are logged to the
+  terminal for every turn.
 
 `run.sh` runs three processes, which you can also start separately:
 `livekit-server --dev`, `python agent.py dev`, `python server.py`.
@@ -56,10 +63,12 @@ Open **http://localhost:8000**, press **Start**, allow the microphone, and ask s
 │ Start / Pause / Resume   │◄─►│ livekit-server  │◄─►│ agent.py (LiveKit Agents)│
 │ live transcript          │   │ (local, --dev)  │   │                          │
 │ agent state orb          │   └─────────────────┘   │ mic ─► Silero VAD (local)│
+│ cost & latency panel     │                          │                          │
 └───────────┬──────────────┘          WebRTC          │   └─► assemblyai.STT ────┼──► Streaming STT
             │ GET /token                              │        │ turn ended       │    (+ end-of-turn)
             ▼                                         │        ▼                  │
-     server.py (page + room tokens)                   │   LLM (OpenAI-compatible)─┼──► LLM Gateway
+     server.py (page, room tokens,                    │   LLM (OpenAI-compatible)─┼──► LLM Gateway
+       interpreter relay)                             │                           │
                                                       │        │ "<es>¿Dónde…?</es>"│
                                                       │        ▼                  │
                                                       │   language_tts.py ────────┼──► Streaming TTS
@@ -69,11 +78,12 @@ Open **http://localhost:8000**, press **Start**, allow the microphone, and ask s
 
 | File | Role |
 |---|---|
-| `agent.py` | The agent: STT/LLM/TTS configuration, turn-taking, pause/resume RPC, latency metrics |
-| `language_tts.py` | Splits the LLM's tagged reply by language and speaks each segment with that language's native voice; keeps idle TTS sessions alive |
+| `agent.py` | The agent: STT/LLM/TTS configuration, turn-taking, pause/resume and summary RPCs, latency metrics |
+| `language_tts.py` | Splits the LLM's tagged reply by language and speaks each segment with that language's native voice; keeps idle TTS sessions alive; counts TTS characters for the cost estimate |
 | `prompts.py` | The tutor's system prompt and greeting |
-| `server.py` | Serves the web page and mints LiveKit room tokens |
-| `web/index.html` | Single-file UI (no build step), LiveKit browser SDK from a CDN |
+| `usage.py` | Per-conversation latency and estimated cost, with the list prices it uses |
+| `server.py` | Serves the web page, mints LiveKit room tokens, and backs the interpreter: STT relay, translation fallback, TTS tokens |
+| `web/index.html` | Single-file UI (no build step): intro screen, both tabs, LiveKit browser SDK from a CDN |
 | `run.sh` | Starts all three processes; Ctrl+C stops them |
 
 ### One turn
@@ -150,6 +160,81 @@ models on the Gateway are worth benchmarking the same way on a paid account. The
 true pause/resume) instead of discarding the rest of the reply. A learner who steps away and
 comes back hears the end of the phrase; a learner who wants to move on just talks.
 
+### Cost and latency panel
+
+Built for the customer's evaluation: speed and cost per conversation are the two numbers they'll
+compare against their current stack, so the demo shows them live instead of in a spreadsheet later.
+
+- **Latency** comes from LiveKit, which attaches each turn's timings to the conversation history:
+  voice to voice (learner stops talking → tutor audio starts), end-of-turn detection, LLM first
+  token, TTS first audio. The panel shows the median and the slowest turn. The greeting isn't
+  counted, since it answers nothing.
+- **Cost** uses AssemblyAI list prices (checked November 2026, in `usage.py`):
+
+  | Model | Billed on | Price |
+  |---|---|---|
+  | Streaming STT (`assemblyai-stt-3-7-realtime-agent`) | Minutes the session is open, paused time included | $0.45 / hour |
+  | LLM Gateway (`gemma-4-31b`) | Input / output tokens, from LiveKit's LLM metrics | $0.14 / $0.40 per 1M tokens, +10% for the US in-region endpoint |
+  | Streaming TTS (`assemblyai-tts-1`) | Characters sent to TTS, counted across every language's session | $15 per 1M characters |
+
+  It's what the conversation would cost on a pay-as-you-go account; free-plan credits aren't applied.
+
+---
+
+## Extra credit: Stump the Interpreter
+
+A game in the second tab: say one sentence in as many languages as you can, and see whether
+AssemblyAI keeps up. It transcribes you as you speak, translates the sentence into English,
+colors each language in your original sentence, reads the translation back, and keeps score
+(languages in your last sentence, best so far, translation time).
+
+It shows the features the tutor doesn't use:
+
+- **Code-switching across 32 languages.** No `language_codes`: the model listens for every
+  language it supports and switches mid-sentence. (The tutor steers to six because its TTS speaks
+  six; the interpreter only ever speaks English, so it doesn't need to.)
+- **Translation inside the STT stream.** The `llm_gateway` connection parameter makes AssemblyAI
+  run a prompt on each final turn and return the result as an `LLMGatewayResponse` on the same
+  WebSocket, typically 0.4–1 s after the turn ends. No second API call in our code.
+- **Language detection** (`language_detection=true`) labels each turn's language; it's used as
+  the fallback when the LLM's reply can't be parsed.
+- **TTS over HTTP from the browser** with a temporary token: one request per translation, played
+  as it streams in.
+
+**How it's built.** No LiveKit and no agent process: the page captures the mic as 16 kHz PCM
+(an AudioWorklet), streams it over a WebSocket, and plays TTS with the Web Audio API.
+
+```
+ mic ─► page ─► server.py /interpreter/ws ─► Streaming STT (+ translation prompt) ─┐
+                                                                                  │ Turn, LLMGatewayResponse
+ speakers ◄─ page ◄─ TTS HTTP API (Kyla, temporary token) ◄─ English ◄────────────┘
+```
+
+**Decisions and findings:**
+
+- **Temporary tokens stop translating after 10 turns.** The page first connected to AssemblyAI
+  directly with a temporary token (the documented way for browsers). After a few sentences,
+  translations stopped arriving. Tested with a 16-sentence clip: a token session returned exactly
+  10 `LLMGatewayResponse` messages and then none, even with the next sentences 30+ s later (so not
+  a per-minute limit), and even with a token minted with a higher LLM Gateway `rpm`. The same
+  session authenticated with the API key translated all 16. This isn't in the docs, so it's worth
+  reporting. The fix: `server.py` relays the STT WebSocket and adds the API key and the
+  translation prompt server-side. The key still never reaches the page, and translation stays
+  inside the STT stream. The relay passed the same 16-sentence test with 16 translations.
+- **A translation that never arrives doesn't hang the page.** The docs say a failed or timed-out
+  translation sends nothing. If no translation arrives within 4 s, the page asks
+  `/interpreter/translate`, which runs the same prompt against LLM Gateway directly; the card is
+  marked "via fallback".
+- **Per-language colors come from the LLM, not the STT model.** Language detection labels a whole
+  turn, not each word, so the translation prompt also returns the sentence split into language
+  segments. The page says which is which.
+- **Mid-sentence Mandarin is the hardest case seen.** Mandarin alone transcribed perfectly
+  (confidence 1.0). In a test clip of synthetic macOS voices switching English → Spanish →
+  Portuguese → Mandarin, the Portuguese and Mandarin parts came out as Spanish-sounding text.
+  With a real speaker, Mandarin, Spanish and Portuguese sentences all transcribed correctly.
+- **Echo.** While the translation plays, the page sends silence instead of mic audio so the
+  model doesn't transcribe Kyla.
+
 ---
 
 ## Limitations and what I found along the way
@@ -177,6 +262,12 @@ comes back hears the end of the phrase; a learner who wants to move on just talk
   test set around it.
 - **No LLM fallback yet.** One request in testing got no response for 10 s before LiveKit retried.
   Next step: a shorter timeout plus an LLM Gateway fallback model.
+- **An open session is billed even when idle.** Streaming STT is billed for the time the session is
+  open. A browser tab left open (or paused) keeps its session running; one left over during
+  development ran for 15+ minutes with no audio. A deployment should close sessions after a period
+  of inactivity.
+- **Chrome only for the interpreter.** It records the mic through a 16 kHz `AudioContext`, which
+  Firefox doesn't allow.
 - **Local only.** `livekit-server --dev` uses fixed dev credentials and binds to localhost. A
   deployment would use LiveKit Cloud or a self-hosted server with real keys, and mint browser
   tokens server-side as `server.py` does.
