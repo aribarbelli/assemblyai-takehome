@@ -66,6 +66,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
     router = LanguageRouter()
     router.prewarm()  # English only; other languages connect on first use (see LanguageRouter)
+    router.start_keepalive()  # hold idle TTS sessions open (AssemblyAI closes them after 120 s)
+    ctx.add_shutdown_callback(router.aclose)
 
     session = AgentSession(
         stt=assemblyai.STT(

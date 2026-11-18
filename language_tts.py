@@ -41,6 +41,12 @@ SAME_VOICE_FOR_ALL_LANGUAGES = False  # tried it: Kyla sounds bad in Spanish
 
 # <es>...</es> etc. switch language; <hint>...</hint> is shown on screen but never spoken
 # (written respellings like "beeb-lee-oh-TEH-kah" sound terrible read aloud by a TTS voice).
+# AssemblyAI closes a TTS session after 120 s with no frame in either direction (the maximum;
+# it can't be raised). Every reconnect counts against the account's new-sessions-per-minute limit
+# and delays the next phrase, so idle sessions get a KeepAlive well inside that window.
+_KEEPALIVE_FRAME = '{"type": "KeepAlive"}'
+_KEEPALIVE_INTERVAL_S = 60
+
 _TAG = re.compile(r"<(/?)([a-z]{2}|hint)>")
 _MAX_TAG_LEN = 7  # "</hint>"
 
@@ -58,6 +64,26 @@ class LanguageRouter:
         self._tts: dict[str, assemblyai.TTS] = {
             BASE_LANGUAGE: assemblyai.TTS(model="assemblyai-tts-1", voice=BASE_VOICE)
         }
+        self._keepalive_task: asyncio.Task[None] | None = None
+
+    def start_keepalive(self) -> None:
+        if self._keepalive_task is None:
+            self._keepalive_task = asyncio.create_task(self._keepalive_loop(), name="tts-keepalive")
+
+    async def aclose(self) -> None:
+        if self._keepalive_task:
+            self._keepalive_task.cancel()
+
+    async def _keepalive_loop(self) -> None:
+        # livekit-plugins-assemblyai 1.8.12 assumes idle sessions never time out, so it sends no
+        # KeepAlive. Its pool isn't public API, which is why requirements.txt pins the version.
+        while True:
+            await asyncio.sleep(_KEEPALIVE_INTERVAL_S)
+            for tts in self._tts.values():
+                # Includes a session held mid-reply while the learner has paused playback.
+                for conn in list(tts._pool._connections):
+                    if conn.usable:
+                        conn.send(_KEEPALIVE_FRAME)
 
     @property
     def base_tts(self) -> assemblyai.TTS:
