@@ -3,3 +3,5 @@
 __pycache__/
 *.pdf
 *.log
+# Evaluation recordings (a real person's voice): not published; record your own with evals/record.py
+evals/clips/

@@ -181,6 +181,64 @@ compare against their current stack, so the demo shows them live instead of in a
 
 ---
 
+## Evaluation: recorded clips, streamed in real time
+
+A first pass at the offline replay in the [evaluation plan](docs/evaluation-plan.md#4-the-harness),
+built around how a language tutor fails rather than general accuracy. Nine short clips (one
+speaker: me) each test one failure mode. `evals/run.py` streams each one through the real-time
+model in 50 ms chunks at speaking pace, exactly like the tutor's mic audio, under several
+configurations, and checks the transcript. Same audio every run, so configurations are comparable.
+
+```bash
+python evals/record.py   # guided recording of the clips in evals/clips.py (audio isn't in the repo)
+python evals/run.py      # streams them, prints pass/fail, writes evals/results.md
+```
+
+| Clip | Tests | Tutor | + taught words | Preset turn timing | + learner context | All 32 languages |
+|---|---|---|---|---|---|---|
+| "How do I say *biblioteca*…" | Foreign word in an English question | ✅ | – | ✅ | ✅ | ✅ |
+| "Why is it *el perro* and not *la perro*?" | Same | ✅ | – | ✅ | ✅ | ✅ |
+| "¿Dónde está la biblioteca?" | Correct attempt | ✅ | ✅ | ✅ | ✅ | ✅ |
+| "¿Dónde está la **bibliotica**?" (wrong on purpose) | Wrong attempt must stay wrong | ❌ | ❌ | ❌ | ❌ | ❌ |
+| "Eu preciso de um advogado." | Correct attempt (the "advocado" case) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| "Advogado." | One-word turn | ✅ | ✅ | ✅ | ✅ | ✅ |
+| "我想去图书馆。" | Correct attempt, Mandarin | ❌ ¹ | ❌ ¹ | ❌ ¹ | ❌ ¹ | ✅ |
+| "How do you say… um… the bill?" | Pauses mustn't end the turn | ✅ | – | ✅ | ✅ | ✅ |
+| "…the *mercado*, *comprei umas frutas*, 但是太贵了" | Four languages, one sentence | ❌ ² | – | ❌ ³ | ❌ ² | ❌ ² |
+
+"Tutor" is `agent.py`'s exact settings. "+ taught words" passes the word the tutor just taught as
+`keyterms_prompt` (only for clips that follow a lesson). "+ learner context" adds a `prompt`
+describing a learner who mispronounces words. Full transcripts are in
+[`evals/results.md`](evals/results.md).
+
+¹ Empty transcript: the tutor steers to its six languages, which don't include Mandarin. Expected.
+² The Mandarin came out romanized, roughly as it sounds: "dan si, tai guela".
+³ The turn ended after "compré unas frutas" (now in Spanish) and the rest was lost.
+
+**What it found:**
+
+- **The model "corrects" wrong attempts, and nothing I tried changes that.** A deliberate
+  *bibliotica* was transcribed as "biblioteca" in every configuration, with word confidence 1.0
+  (the same as the correct attempt). Key terms, a contextual prompt, and a prompt telling it not to
+  correct (which the docs say isn't supported) all left it unchanged, without hurting the correct
+  attempts. So speech-to-text tells the tutor *which words* the learner said, not *how well*: the
+  tutor can confirm the right sentence, but it can't grade pronunciation. That's a requirement to
+  scope separately (a pronunciation-assessment model), and to test on the incumbent too, since
+  any STT trained to output real words probably behaves the same way.
+- **Correct attempts and code-switched questions are solid.** Every correct Spanish and Portuguese
+  attempt, the one-word turn, and both English questions with embedded foreign words came back
+  right in every configuration. The live "advocado" error didn't reproduce on recorded audio.
+- **Mandarin in the middle of a sentence is the weak spot.** Mandarin on its own is perfect once
+  the model listens for it. Switched into mid-sentence after English and Portuguese, it came out
+  as romanized sounds in every configuration.
+- **The tutor's longer turn timing earned its keep on the mixed sentence.** With the preset's
+  128 ms timing the turn ended mid-sentence and the Mandarin was lost; with the tutor's 600 ms it
+  stayed whole. (The hesitant clip passed either way: my pauses weren't long enough to trigger it.)
+- **Limits of this run:** one speaker, nine clips, one run each. Enough to find failure modes and
+  compare configurations, not to measure rates. That's what the full test set in the plan is for.
+
+---
+
 ## Extra credit: Stump the Interpreter
 
 A game in the second tab: say one sentence in as many languages as you can, and see whether
@@ -231,7 +289,9 @@ It shows the features the tutor doesn't use:
 - **Mid-sentence Mandarin is the hardest case seen.** Mandarin alone transcribed perfectly
   (confidence 1.0). In a test clip of synthetic macOS voices switching English → Spanish →
   Portuguese → Mandarin, the Portuguese and Mandarin parts came out as Spanish-sounding text.
-  With a real speaker, Mandarin, Spanish and Portuguese sentences all transcribed correctly.
+  With a real speaker, single-language Mandarin, Spanish and Portuguese sentences all transcribed
+  correctly, but Mandarin switched into mid-sentence still came out romanized ("dan si, tai
+  guela"; see [Evaluation](#evaluation-recorded-clips-streamed-in-real-time)).
 - **Echo.** While the translation plays, the page sends silence instead of mic audio so the
   model doesn't transcribe Kyla.
 
@@ -256,10 +316,10 @@ It shows the features the tutor doesn't use:
 - **Word-level transcript alignment is off.** Speaking one reply over several TTS sessions means
   LiveKit falls back to its own text/audio sync, so after a barge-in the saved history may contain
   a few words the learner didn't actually hear.
-- **A correct pronunciation can be transcribed as wrong.** In testing, *advogado* was transcribed
-  as "advocado" five times in a row, so the tutor kept correcting a learner who may have said it
-  right. This is the highest-stakes failure mode for the product; the evaluation plan builds a
-  test set around it.
+- **The tutor can't tell a near-miss pronunciation from a correct one.** Speech-to-text writes down
+  the nearest real word, so *bibliotica* comes back as "biblioteca" and the tutor praises it. See
+  [Evaluation](#evaluation-recorded-clips-streamed-in-real-time). (The opposite error, *advogado*
+  heard as "advocado" five times during live testing, didn't reproduce on recorded clips.)
 - **No LLM fallback yet.** One request in testing got no response for 10 s before LiveKit retried.
   Next step: a shorter timeout plus an LLM Gateway fallback model.
 - **An open session is billed even when idle.** Streaming STT is billed for the time the session is

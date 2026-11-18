@@ -38,7 +38,7 @@ measured on the same audio, not absolute numbers.
 | Metric | Why it matters for language learners | How it's measured |
 |---|---|---|
 | **False rejection rate** on target words | The learner says the word *correctly* and the transcript says otherwise, so the tutor corrects them. Most damaging failure for this product; I hit it while building (*advogado* → "advocado", 5 times). | Attempts labeled correct by native-speaker teachers; % whose transcript doesn't contain the target word |
-| **False acceptance rate** on target words | The opposite: a *wrong* attempt gets "auto-corrected" into the right word, so the learner is never told. A very smart STT can be too smart here. | Attempts labeled incorrect; % transcribed as the target word |
+| **False acceptance rate** on target words | The opposite: a *wrong* attempt gets "auto-corrected" into the right word, so the learner is never told. A very smart STT can be too smart here. **Confirmed in the pilot run (`evals/`):** a deliberate *bibliotica* came back as "biblioteca" in every configuration tried, with word confidence 1.0. | Attempts labeled incorrect; % transcribed as the target word |
 | Accuracy on code-switched turns | Learners ask in English with foreign words inside: *"why is it **el perro** and not **la perro**?"* | WER, plus exact-match on the embedded foreign words |
 | WER on learner speech, per language | Non-native accents in both directions | Standard WER on labeled set |
 | Premature end-of-turn rate | Learners pause mid-thought; being cut off is frustrating and the tutor answers a half-question | % of multi-sentence or hesitant turns split into 2+ turns |
@@ -78,7 +78,9 @@ Two complementary tests, both run on AssemblyAI **and** the incumbent:
 **Offline replay (most of the scorecard).** A script streams every test file through each
 provider's real-time STT, paced at real time with the production settings, and scores the
 results against the labels. Same audio, same conditions, reproducible, and rerunnable after each
-tuning change. Turn segmentation comes from the same run.
+tuning change. Turn segmentation comes from the same run. A first version for AssemblyAI is in
+[`evals/`](../evals/), with a 9-clip pilot set (see the README for results); the POC version adds
+the incumbent and the full test set.
 
 **Live A/B with the reference agent (latency and feel).** The agent in this repo, with STT and TTS
 selectable by configuration, so the same conversation flow runs on either stack. LiveKit's
@@ -150,6 +152,7 @@ from me first, with a plan.
 | TTS doesn't detect language; one session speaks one language | Mixed-language replies need per-segment routing | Solved in the reference agent (`language_tts.py`): LLM tags + a session per language. Hand this over as code they can reuse. |
 | LiveKit plugin sends no TTS `KeepAlive` | Idle sessions drop after 120 s: reconnect delay, lost audio after long pauses | Fixed in the reference agent; report upstream so the plugin fixes it for everyone. |
 | Temporary-token STT sessions stop returning built-in translations after 10 turns (found building the extra-credit interpreter; not documented) | A browser app using real-time translation the documented way breaks silently mid-conversation | Relay the session server-side with the API key (done in `server.py`); report it and get it fixed or documented |
+| **STT reports which words were said, not how well.** A near-miss pronunciation is transcribed as the nearest real word (*bibliotica* → "biblioteca", confidence 1.0); key terms, a contextual prompt and word confidence didn't change that | Transcript comparison can't grade pronunciation; the tutor would praise a mispronounced word | Scope pronunciation grading as its own requirement (a pronunciation-assessment model alongside STT). Measure false acceptance on the incumbent too: likely a property of any STT tuned for accuracy, not an AssemblyAI-only gap |
 | Word-level transcript alignment lost with multiple TTS sessions | After a barge-in, history may include a few unheard words | Minor; acceptable, or fixable by merging word timings across sessions. |
 
 ---
